@@ -4002,125 +4002,85 @@ if st.session_state.current_page == "Case Search":
             if st.button("Generate Episode Strategy", key="generate_strategy", type="primary", use_container_width=True):
                 with st.spinner("Creating episode strategy..."):
                     
-                    # SET THE OPENAI API KEY HERE
-                    import openai
-                    openai.api_key = api_key
-                    
                     # Get actual Wikipedia article content
                     wiki_article_content = ""
                     if wikipedia_data and wikipedia_data.get('article_title'):
-                        # Fetch the actual Wikipedia article text
-                        wiki_url = "https://en.wikipedia.org/w/api.php"
-                        wiki_params = {
-                            "action": "query",
-                            "format": "json",
-                            "titles": wikipedia_data['article_title'],
-                            "prop": "extracts",
-                            "exintro": True,
-                            "explaintext": True,
-                            "exsectionformat": "plain",
-                            "exchars": 3000
-                        }
-                        
-                        try:
-                            wiki_response = requests.get(wiki_url, params=wiki_params, timeout=10)
-                            if wiki_response.status_code == 200:
-                                wiki_data = wiki_response.json()
-                                pages = wiki_data.get("query", {}).get("pages", {})
-                                for page_id, page_data in pages.items():
-                                    if "extract" in page_data:
-                                        wiki_article_content = f"Wikipedia article about {wikipedia_data['article_title']}:\n{page_data['extract'][:2500]}\n\n"
-                        except:
-                            pass
+                        # ... (keep your Wikipedia fetching code as is) ...
+                        pass
                     
                     # ADD WEB SEARCH RESULTS CONTEXT
                     web_search_context = ""
-                    web_search_results = st.session_state.get('web_search_results', None)  # Get from session state
+                    web_search_results = st.session_state.get('web_search_results', None)
                     if web_search_results:
-                        # Truncate if too long, but keep the most important parts
                         web_content = web_search_results[:3000] if len(web_search_results) > 3000 else web_search_results
                         web_search_context = f"Web Search Information:\n{web_content}\n\n"
                     
-                    # Gather context from all sources
-                    wiki_context = ""
-                    if wikidata_results:
-                        wiki_entries = [f"- {r['label']}: {r['description']}" for r in wikidata_results[:3]]
-                        wiki_context = "Wikipedia/Wikidata entries found:\n" + "\n".join(wiki_entries) + "\n"
-                    
-                    news_context = ""
-                    if gdelt_results or nyt_results:
-                        recent_headlines = [article['title'] for article in gdelt_results[:5]]
-                        if nyt_results:
-                            recent_headlines.extend([article['headline'] for article in nyt_results[:3]])
-                        news_context = "Recent news headlines:\n" + "\n".join([f"- {h}" for h in recent_headlines[:8]]) + "\n"
-                    
-                    reddit_context = ""
-                    if reddit_results:
-                        top_posts = [f"- {post['data']['title']} (r/{post['data'].get('subreddit', 'unknown')}, {post['data']['score']} upvotes)" 
-                                    for post in reddit_results[:5]]
-                        reddit_context = "Top Reddit discussions:\n" + "\n".join(top_posts) + "\n"
-                    
-                    pageview_context = ""
-                    if wikipedia_data and wikipedia_data['last_7_days'] > 0:
-                        pageview_context = f"Wikipedia trending: {wikipedia_data['trend_percentage']:.1f}% change, {wikipedia_data['last_7_days']:,} views last week"
+                    # ... (keep your context gathering code) ...
                     
                     prompt = f"""Create a Murder, Mystery & Makeup episode strategy for Bailey Sarian based on this comprehensive research:
-
-            CASE: {case_search}
-
-            DATA SUMMARY:
-            - YouTube Videos: {youtube_count} ({"oversaturated" if youtube_count > 200 else "good opportunity" if youtube_count < 50 else "moderate coverage"})
-            - News Articles: {len(gdelt_results) + len(nyt_results)}
-            - Reddit Discussions: {len(reddit_results)}
-            - {pageview_context}
-
-            {web_search_context}
-
-            {wiki_article_content}
-
-            {wiki_context}
-
-            {news_context}
-
-            {reddit_context}
-
-            Based on ALL this research (especially the web search information), provide:
-            1. EPISODE TITLE: Catchy MMM-style title that hasn't been overused
-            2. UNIQUE ANGLE: What fresh perspective can Bailey bring given the existing coverage?
-            3. COLD OPEN: First 30 seconds hook based on the most shocking detail from the sources
-            4. MAKEUP LOOK: What style pairs with this story
-            5. STORY STRUCTURE: 
-                - Opening: Set the scene (use specific details from web search)
-                - Act 1: Build up (use specific details from all sources)
-                - Act 2: The crime (incorporate facts from web search and Wikipedia)
-                - Act 3: Investigation/aftermath
-                - Conclusion: Bailey's take
-            6. KEY TALKING POINTS: Based on what Reddit/news are discussing
-            7. CONTROVERSY/DISCUSSION POINTS: What are people debating about this case?
-            8. LESSER-KNOWN FACTS: Pull interesting details from the web search that aren't widely covered
-            9. RESEARCH GAPS: What information is missing that Bailey should research further?
-            10. VISUAL ELEMENTS: Specific photos and graphics needed
-            11. ESTIMATED RUNTIME: Episode length
-            12. COMPETITION ANALYSIS: How to differentiate from the {youtube_count} existing videos
-            13. FACT CHECK LIST: Key facts from web search and Wikipedia to verify
-
-            Make it specific to Bailey's casual, engaging style. Use actual details from ALL sources, especially unique information from the web search."""
-
+                    
+                    CASE: {case_search}
+                    
+                    DATA SUMMARY:
+                    - YouTube Videos: {youtube_count} ({"oversaturated" if youtube_count > 200 else "good opportunity" if youtube_count < 50 else "moderate coverage"})
+                    - Reddit Discussions: {len(reddit_results)}
+                    
+                    {web_search_context}
+                    {wiki_article_content}
+                    {wiki_context}
+                    {reddit_context}
+                    
+                    Based on ALL this research (especially the web search information), provide:
+                    1. EPISODE TITLE: Catchy MMM-style title that hasn't been overused
+                    2. UNIQUE ANGLE: What fresh perspective can Bailey bring given the existing coverage?
+                    3. COLD OPEN: First 30 seconds hook based on the most shocking detail from the sources
+                    4. MAKEUP LOOK: What style pairs with this story
+                    5. STORY STRUCTURE: 
+                        - Opening: Set the scene (use specific details from web search)
+                        - Act 1: Build up (use specific details from all sources)
+                        - Act 2: The crime (incorporate facts from web search and Wikipedia)
+                        - Act 3: Investigation/aftermath
+                        - Conclusion: Bailey's take
+                    6. KEY TALKING POINTS: Based on what Reddit/news are discussing
+                    7. CONTROVERSY/DISCUSSION POINTS: What are people debating about this case?
+                    8. LESSER-KNOWN FACTS: Pull interesting details from the web search that aren't widely covered
+                    9. RESEARCH GAPS: What information is missing that Bailey should research further?
+                    10. VISUAL ELEMENTS: Specific photos and graphics needed
+                    11. ESTIMATED RUNTIME: Episode length
+                    12. COMPETITION ANALYSIS: How to differentiate from the {youtube_count} existing videos
+                    13. FACT CHECK LIST: Key facts from web search and Wikipedia to verify
+                    
+                    Make it specific to Bailey's casual, engaging style. Use actual details from ALL sources, especially unique information from the web search."""
+                    
                     try:
-                        from openai import OpenAI
-                        client = OpenAI(api_key=api_key)
+                        # Use requests instead of OpenAI client
+                        import requests
+                        import json
                         
-                        response = client.chat.completions.create(
-                            model="gpt-4",
-                            messages=[{"role": "user", "content": prompt}],
-                            max_tokens=1500,
-                            timeout=30
-                        )
+                        url = "https://api.openai.com/v1/chat/completions"
                         
-                        strategy = response.choices[0].message.content
-                        st.session_state.generated_strategy = strategy
-                        st.session_state.show_strategy = True
+                        headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json"
+                        }
                         
+                        data = {
+                            "model": "gpt-4",
+                            "messages": [{"role": "user", "content": prompt}],
+                            "max_tokens": 1500,
+                            "temperature": 0.7
+                        }
+                        
+                        response = requests.post(url, headers=headers, json=data, timeout=30)
+                        
+                        if response.status_code == 200:
+                            result = response.json()
+                            strategy = result['choices'][0]['message']['content']
+                            st.session_state.generated_strategy = strategy
+                            st.session_state.show_strategy = True
+                        else:
+                            st.error(f"Error: {response.status_code} - {response.text}")
+                            
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
             
