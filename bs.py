@@ -939,6 +939,7 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
     try:
         import requests
         import json
+        import re
         
         url = "https://api.perplexity.ai/chat/completions"
         
@@ -966,6 +967,11 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
                 - Non-violent crimes
                 - Living people (unless they are perpetrators/suspects in murder cases)
                 
+                IMPORTANT CITATION RULES:
+                - DO NOT use numbered citations like [1][2][3] in your response
+                - Instead, use inline source attribution like "according to FBI records" or "as reported by CNN"
+                - At the very end, add a "Sources:" section listing the sources you referenced
+                
                 If "{case_name}" is NOT associated with any murder/death/true crime case, respond with:
                 "No true crime case found for this name. This may be a political figure, civil case, or living person not associated with murder cases."
                 
@@ -978,6 +984,10 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
                 6. Key evidence or mysteries
                 7. Recent updates
                 
+                End with:
+                Sources:
+                - List your sources here
+                
                 Remember: This is for a true crime podcast. ONLY return information about murders, deaths, or violent crimes."""
             }],
             "temperature": 0.2,
@@ -989,6 +999,9 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
         if response.status_code == 200:
             result = response.json()
             content = result['choices'][0]['message']['content']
+            
+            # Remove any remaining numbered citations like [1][2][3]
+            content = re.sub(r'\[\d+\](\[\d+\])*', '', content)
             
             # Check if no crime case was found
             if "no true crime case found" in content.lower():
