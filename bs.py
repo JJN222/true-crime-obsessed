@@ -5103,19 +5103,19 @@ elif st.session_state.current_page == "Movies & TV Shows":
             else:
                 search_year = None
         
-    if st.button("SEARCH", key="search_crime_titles", type="primary") and search_query:
-        with st.spinner(f"Searching for '{search_query}'..."):
-            # First do the search
-            results = search_tmdb(tmdb_key, query=search_query, media_type=search_media_type, year=search_year)
-            
-            if results and results.get('results'):
-                # Store raw results for sorting
-                st.session_state.crime_search_results_raw = results['results']
-                st.session_state.crime_search_query_used = search_query
-                st.session_state.crime_search_media_type_used = search_media_type
-                st.success(f"Found {len(results['results'])} results for '{search_query}'")
-            else:
-                st.warning("No results found. Try different keywords.")
+        if st.button("SEARCH", key="search_crime_titles", type="primary") and search_query:
+            with st.spinner(f"Searching for '{search_query}'..."):
+                # First do the search
+                results = search_tmdb(tmdb_key, query=search_query, media_type=search_media_type, year=search_year)
+                
+                if results and results.get('results'):
+                    # Store raw results for sorting
+                    st.session_state.crime_search_results_raw = results['results']
+                    st.session_state.crime_search_query_used = search_query
+                    st.session_state.crime_search_media_type_used = search_media_type
+                    st.success(f"Found {len(results['results'])} results for '{search_query}'")
+                else:
+                    st.warning("No results found. Try different keywords.")
     
     # If we have search results, show sorting options
     if 'crime_search_results_raw' in st.session_state and st.session_state.crime_search_results_raw:
