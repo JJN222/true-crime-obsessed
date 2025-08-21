@@ -5104,7 +5104,7 @@ elif st.session_state.current_page == "Movies & TV Shows":
                 search_year = None
         
     if st.button("SEARCH", key="search_cases_btn", type="primary", use_container_width=True):
-        if not case_search:
+        if st.button("SEARCH", key="search_crime_titles", type="primary") and search_query:  # CORRECT - use search_query
             st.warning("Please enter a search term")
         else:
             # Create a progress bar and status text (no spinner)
