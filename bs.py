@@ -4004,18 +4004,35 @@ if st.session_state.current_page == "Case Search":
                     
                     # Get actual Wikipedia article content
                     wiki_article_content = ""
-                    if wikipedia_data and wikipedia_data.get('article_title'):
-                        # ... (keep your Wikipedia fetching code as is) ...
+                    if 'wikipedia_data' in st.session_state and st.session_state.wikipedia_data and st.session_state.wikipedia_data.get('article_title'):
+                        # ... (your Wikipedia fetching code) ...
                         pass
                     
-                    # ADD WEB SEARCH RESULTS CONTEXT
+                    # Get web search results context
                     web_search_context = ""
                     web_search_results = st.session_state.get('web_search_results', None)
                     if web_search_results:
                         web_content = web_search_results[:3000] if len(web_search_results) > 3000 else web_search_results
                         web_search_context = f"Web Search Information:\n{web_content}\n\n"
                     
-                    # ... (keep your context gathering code) ...
+                    # Build wiki context from wikidata results
+                    wiki_context = ""
+                    if 'wikidata_results' in st.session_state and st.session_state.wikidata_results:
+                        wiki_entries = [f"- {r['label']}: {r['description']}" for r in st.session_state.wikidata_results[:3]]
+                        wiki_context = "Wikipedia/Wikidata entries found:\n" + "\n".join(wiki_entries) + "\n"
+                    
+                    # Build Reddit context
+                    reddit_context = ""
+                    if 'reddit_results' in st.session_state and st.session_state.reddit_results:
+                        top_posts = [f"- {post['data']['title']} (r/{post['data'].get('subreddit', 'unknown')}, {post['data']['score']} upvotes)" 
+                                    for post in st.session_state.reddit_results[:5]]
+                        reddit_context = "Top Reddit discussions:\n" + "\n".join(top_posts) + "\n"
+                    
+                    # Get YouTube count
+                    youtube_count = st.session_state.get('youtube_count', 0)
+                    
+                    # Get case search term
+                    case_search = st.session_state.get('search_query', 'Unknown Case')
                     
                     prompt = f"""Create a Murder, Mystery & Makeup episode strategy for Bailey Sarian based on this comprehensive research:
                     
@@ -4023,7 +4040,7 @@ if st.session_state.current_page == "Case Search":
                     
                     DATA SUMMARY:
                     - YouTube Videos: {youtube_count} ({"oversaturated" if youtube_count > 200 else "good opportunity" if youtube_count < 50 else "moderate coverage"})
-                    - Reddit Discussions: {len(reddit_results)}
+                    - Reddit Discussions: {len(st.session_state.get('reddit_results', []))}
                     
                     {web_search_context}
                     {wiki_article_content}
@@ -4083,7 +4100,7 @@ if st.session_state.current_page == "Case Search":
                             
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
-            
+
             # Display strategy outside the button
             if st.session_state.show_strategy and st.session_state.generated_strategy:
                 st.markdown("---")
