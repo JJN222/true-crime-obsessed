@@ -932,23 +932,24 @@ def search_with_perplexity(query, api_key, search_type="comprehensive"):
         return None
 
 def get_perplexity_case_analysis(case_name, perplexity_api_key):
-    """
-    Get comprehensive case analysis using Perplexity's online model
-    """
+    """Get comprehensive case analysis using Perplexity's online model"""
     if not perplexity_api_key:
         return None
     
     try:
-        from openai import OpenAI
+        import requests
+        import json
         
-        client = OpenAI(
-            api_key=perplexity_api_key,
-            base_url="https://api.perplexity.ai"
-        )
+        url = "https://api.perplexity.ai/chat/completions"
         
-        response = client.chat.completions.create(
-            model="sonar",
-            messages=[{
+        headers = {
+            "Authorization": f"Bearer {perplexity_api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "sonar",
+            "messages": [{
                 "role": "user",
                 "content": f"""Provide comprehensive information about the {case_name} case.
                 
@@ -961,30 +962,29 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
                 6. Any mysteries or controversies
                 7. Recent updates or developments
                 
-                IMPORTANT: Instead of using numbered citations like [1][2][3], please include the actual source names inline (e.g., "according to Wikipedia" or "as reported by CNN") and then list all source URLs at the end under a "Sources:" section.
-                
                 Focus on factual, verified information from reliable sources."""
             }],
-            temperature=0.2,
-            max_tokens=2000
-        )
-        
-        content = response.choices[0].message.content
-        
-        # Process the content to remove the bracket citations since they're not clickable
-        import re
-        # Remove citations like [1], [2], [1][2], etc.
-        content = re.sub(r'\[\d+\](\[\d+\])*', '', content)
-        
-        return {
-            'overview': content
+            "temperature": 0.2,
+            "max_tokens": 2000
         }
         
+        response = requests.post(url, headers=headers, json=data)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return {
+                'overview': result['choices'][0]['message']['content']
+            }
+        else:
+            print(f"Perplexity API error: {response.status_code} - {response.text}")
+            st.error(f"Perplexity API error: {response.status_code}")
+            return None
+            
     except Exception as e:
         print(f"Perplexity API error: {str(e)}")
         st.error(f"Perplexity API error: {str(e)}")
         return None
-        
+            
 def search_reddit_by_keywords(query, subreddits, limit=5):
   """Search Reddit for posts containing specific keywords"""
   all_results = []
