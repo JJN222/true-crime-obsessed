@@ -951,18 +951,34 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
             "model": "sonar",
             "messages": [{
                 "role": "user",
-                "content": f"""Provide comprehensive information about the {case_name} case.
+                "content": f"""Search for information about "{case_name}" ONLY in the context of:
+                - Murder cases
+                - Homicides
+                - Serial killers
+                - Missing persons (presumed dead)
+                - Unsolved mysteries involving death
+                - True crime cases
                 
-                Include:
-                1. What happened (overview of the case)
+                DO NOT include:
+                - Political cases
+                - Civil lawsuits
+                - Corporate fraud
+                - Non-violent crimes
+                - Living people (unless they are perpetrators/suspects in murder cases)
+                
+                If "{case_name}" is NOT associated with any murder/death/true crime case, respond with:
+                "No true crime case found for this name. This may be a political figure, civil case, or living person not associated with murder cases."
+                
+                If you find a TRUE CRIME case, include:
+                1. What happened (the murder/crime)
                 2. When and where it occurred
-                3. Key people involved (victims, suspects, investigators)
-                4. Timeline of events
-                5. Current status or resolution
-                6. Any mysteries or controversies
-                7. Recent updates or developments
+                3. Victim(s) - full names and ages if available
+                4. Suspect(s)/Perpetrator(s)
+                5. Current status (solved/unsolved/convicted)
+                6. Key evidence or mysteries
+                7. Recent updates
                 
-                Focus on factual, verified information from reliable sources."""
+                Remember: This is for a true crime podcast. ONLY return information about murders, deaths, or violent crimes."""
             }],
             "temperature": 0.2,
             "max_tokens": 2000
@@ -972,8 +988,16 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
         
         if response.status_code == 200:
             result = response.json()
+            content = result['choices'][0]['message']['content']
+            
+            # Check if no crime case was found
+            if "no true crime case found" in content.lower():
+                return {
+                    'overview': f"❌ **No True Crime Case Found**\n\n{content}\n\nTry searching for:\n- A different spelling\n- Adding context (e.g., 'victim' or 'murder')\n- Including location or year"
+                }
+            
             return {
-                'overview': result['choices'][0]['message']['content']
+                'overview': content
             }
         else:
             print(f"Perplexity API error: {response.status_code} - {response.text}")
