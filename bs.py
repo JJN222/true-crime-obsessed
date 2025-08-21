@@ -5103,202 +5103,95 @@ elif st.session_state.current_page == "Movies & TV Shows":
             else:
                 search_year = None
         
-    if st.button("SEARCH", key="search_cases_btn", type="primary", use_container_width=True):
-        if st.button("SEARCH", key="search_crime_titles", type="primary") and search_query:  # CORRECT - use search_query
-            st.warning("Please enter a search term")
-        else:
-            # Create a progress bar and status text (no spinner)
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+    if st.button("SEARCH", key="search_crime_titles", type="primary") and search_query:
+        with st.spinner(f"Searching for '{search_query}'..."):
+            # First do the search
+            results = search_tmdb(tmdb_key, query=search_query, media_type=search_media_type, year=search_year)
             
-            # Search all sources with progress updates
-            status_text.text("Searching Wikipedia...")
-            progress_bar.progress(10)
-            wikidata_results = search_wikidata(case_search, 10)
-            
-            status_text.text("Checking YouTube...")
-            progress_bar.progress(25)
-            youtube_count = count_youtube_videos(case_search, youtube_api_key) if youtube_api_key else 0
-            
-            status_text.text("Analyzing case with AI...")
-            progress_bar.progress(40)
-            # Use Perplexity for comprehensive case research
-            web_search_results = None
-            if perplexity_api_key:
-                # Get comprehensive case information from Perplexity
-                perplexity_data = get_perplexity_case_analysis(case_search, perplexity_api_key)
-                
-                if perplexity_data:
-                    # Format the results for display
-                    formatted_results = []
-                    
-                    formatted_results.append("## Case Overview\n")
-                    formatted_results.append(perplexity_data.get('overview', 'No overview available'))
-                    formatted_results.append("\n")
-                    
-                    if perplexity_data.get('recent_updates'):
-                        formatted_results.append("## Recent Updates\n")
-                        formatted_results.append(perplexity_data.get('recent_updates'))
-                        formatted_results.append("\n")
-                    
-                    if perplexity_data.get('evidence_mysteries'):
-                        formatted_results.append("## Evidence & Mysteries\n")
-                        formatted_results.append(perplexity_data.get('evidence_mysteries'))
-                        formatted_results.append("\n")
-                    
-                    if perplexity_data.get('media_analysis'):
-                        formatted_results.append("## Media Coverage Analysis\n")
-                        formatted_results.append(perplexity_data.get('media_analysis'))
-                    
-                    web_search_results = "\n".join(formatted_results)
+            if results and results.get('results'):
+                # Store raw results for sorting
+                st.session_state.crime_search_results_raw = results['results']
+                st.session_state.crime_search_query_used = search_query
+                st.session_state.crime_search_media_type_used = search_media_type
+                st.success(f"Found {len(results['results'])} results for '{search_query}'")
             else:
-                pass  # Don't show warning during search
-
-            status_text.text("Getting Wikipedia pageviews...")
-            progress_bar.progress(60)
-            # Get Wikipedia pageviews
-            wikipedia_data = get_wikipedia_pageviews(case_search)
+                st.warning("No results found. Try different keywords.")
+    
+    # If we have search results, show sorting options
+    if 'crime_search_results_raw' in st.session_state and st.session_state.crime_search_results_raw:
+        st.markdown("---")
+        st.markdown(f"**Results for: '{st.session_state.crime_search_query_used}'**")
+        
+        # Sorting options
+        sort_options = [
+            ("popularity", "Most Popular"),
+            ("vote_average", "Highest Rated"),
+            ("vote_count", "Most Voted"),
+            ("release_date", "Newest First"),
+            ("title", "Alphabetical")
+        ]
+        
+        sort_by = st.selectbox(
+            "Sort Results By",
+            options=[s[0] for s in sort_options],
+            format_func=lambda x: dict(sort_options).get(x, x),
+            key="crime_search_sort"
+        )
+        
+        # Sort the results
+        sorted_results = sorted(
+            st.session_state.crime_search_results_raw,
+            key=lambda x: x.get(sort_by, 0) if sort_by != 'title' else (x.get('title') or x.get('name', '')),
+            reverse=(sort_by != 'title')
+        )
+        
+        # Get genres for the selected media type
+        genres = get_tmdb_genres(tmdb_key, st.session_state.crime_search_media_type_used)
+        
+        # Display sorted results
+        for i, item in enumerate(sorted_results[:20], 1):
+            title = item.get('title') or item.get('name', 'Unknown')
+            release_date = item.get('release_date') or item.get('first_air_date', 'Unknown')
             
-            status_text.text("Searching Reddit discussions...")
-            progress_bar.progress(75)
-            # Search Reddit - ALL of Reddit for titles containing the search term
-            reddit_results = []
-            try:
-                # Use Pushshift API (Reddit archive) for better search
-                pushshift_url = "https://api.pushshift.io/reddit/search/submission/"
+            with st.expander(f"{i:02d} | {title} ({release_date[:4] if release_date != 'Unknown' and len(release_date) >= 4 else 'N/A'})", expanded=False):
+                col1, col2 = st.columns([1, 3])
                 
-                # Try Pushshift first (better search)
-                params = {
-                    'q': case_search,
-                    'size': 100,
-                    'sort': 'score',
-                    'sort_type': 'desc'
-                }
+                with col1:
+                    if item.get('poster_path'):
+                        poster_url = f"https://image.tmdb.org/t/p/w200{item['poster_path']}"
+                        st.image(poster_url, width=150)
                 
-                try:
-                    response = requests.get(pushshift_url, params=params, timeout=10)
-                    if response.status_code == 200:
-                        data = response.json()
-                        for item in data.get('data', []):
-                            # Convert Pushshift format to Reddit format
-                            reddit_results.append({
-                                'data': {
-                                    'title': item.get('title', ''),
-                                    'selftext': item.get('selftext', ''),
-                                    'subreddit': item.get('subreddit', ''),
-                                    'score': item.get('score', 0),
-                                    'num_comments': item.get('num_comments', 0),
-                                    'permalink': f"/r/{item.get('subreddit')}/comments/{item.get('id')}/",
-                                    'url': item.get('url', ''),
-                                    'created_utc': item.get('created_utc', 0)
-                                }
-                            })
-                except:
-                    pass  # Pushshift might be down, continue to Reddit search
-                
-                # Update progress
-                progress_bar.progress(85)
-                
-                # If Pushshift didn't work or found nothing, use Reddit search with better parameters
-                if not reddit_results:
-                    # Search variations to improve results
-                    search_variations = [
-                        case_search,  # Full name
-                        ' '.join(case_search.split()[:2]) if len(case_search.split()) > 2 else case_search,  # First two words
-                        case_search.split()[-1] if len(case_search.split()) > 1 else case_search,  # Last word only
-                    ]
+                with col2:
+                    # Metrics
+                    st.markdown(f"""
+                    <div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
+                        <div>
+                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_average', 0):.1f}</p>
+                            <p style="font-size: 12px; text-transform: uppercase; color: #666;">Rating</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_count', 0):,}</p>
+                            <p style="font-size: 12px; text-transform: uppercase; color: #666;">Votes</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('popularity', 0):.0f}</p>
+                            <p style="font-size: 12px; text-transform: uppercase; color: #666;">Popularity</p>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-                    }
+                    st.write(f"**Overview:** {item.get('overview', 'No overview available.')}")
                     
-                    for search_term in search_variations:
-                        # Search across all Reddit
-                        search_url = "https://www.reddit.com/search.json"
-                        params = {
-                            'q': f'{search_term} (murder OR killer OR crime OR death)',  # Add context
-                            'sort': 'relevance',
-                            'limit': 100,
-                            't': 'all',
-                            'type': 'link',
-                            'raw_json': 1
-                        }
-                        
-                        time.sleep(1)
-                        response = requests.get(search_url, headers=headers, params=params, timeout=15)
-                        
-                        if response.status_code == 200:
-                            data = response.json()
-                            if 'data' in data and 'children' in data['data']:
-                                for post in data['data']['children']:
-                                    post_data = post['data']
-                                    title_lower = post_data['title'].lower()
-                                    
-                                    # Check if relevant to our search
-                                    if any(word.lower() in title_lower for word in case_search.split()):
-                                        reddit_results.append(post)
-                        
-                        if reddit_results:
-                            break  # Stop if we found results
+                    # Get genre names
+                    genre_names = [genres.get(gid, 'Unknown') for gid in item.get('genre_ids', [])]
+                    if genre_names:
+                        st.write(f"**Genres:** {', '.join(genre_names)}")
                     
-                    # Update progress
-                    progress_bar.progress(90)
-                    
-                    # Last resort: search specific true crime subreddits
-                    if not reddit_results:
-                        crime_subreddits = ["serialkillers", "TrueCrime", "UnresolvedMysteries"]
-                        
-                        for subreddit in crime_subreddits:
-                            url = f"https://www.reddit.com/r/{subreddit}/search.json"
-                            params = {
-                                'q': case_search.split()[-1],  # Just last name
-                                'restrict_sr': 'on',
-                                'sort': 'relevance',
-                                'limit': 50,
-                                't': 'all',
-                                'raw_json': 1
-                            }
-                            
-                            response = requests.get(url, headers=headers, params=params, timeout=10)
-                            if response.status_code == 200:
-                                data = response.json()
-                                for post in data.get('data', {}).get('children', []):
-                                    reddit_results.append(post)
-                
-                # Remove duplicates and sort by score
-                seen = set()
-                unique_results = []
-                for post in reddit_results:
-                    post_id = post['data'].get('id', post['data'].get('title', ''))
-                    if post_id not in seen:
-                        seen.add(post_id)
-                        unique_results.append(post)
-                
-                reddit_results = sorted(unique_results, key=lambda x: x['data'].get('score', 0), reverse=True)[:20]
-                
-            except Exception as e:
-                print(f"Reddit search error: {e}")
+                    # TMDB link
+                    media_type_for_url = "movie" if 'title' in item else "tv"
+                    tmdb_url = f"https://www.themoviedb.org/{media_type_for_url}/{item.get('id')}"
+                    st.markdown(f"[View on TMDB]({tmdb_url})")
             
-            # Complete the progress
-            progress_bar.progress(100)
-            status_text.text("Search complete!")
-            
-            # Hide progress indicators after a short delay
-            time.sleep(0.5)
-            progress_bar.empty()
-            status_text.empty()
-            
-            # Store all results in session state
-            st.session_state.search_performed = True
-            st.session_state.search_query = case_search
-            st.session_state.wikidata_results = wikidata_results
-            st.session_state.gdelt_results = []
-            st.session_state.nyt_results = []
-            st.session_state.youtube_count = youtube_count
-            st.session_state.wikipedia_data = wikipedia_data
-            st.session_state.reddit_results = reddit_results
-            st.session_state.web_search_results = web_search_results
-            st.session_state.case_search = case_search    
 elif st.session_state.current_page == "Saved Ideas":
     st.markdown("""
     <h3 style="font-family: 'Crimson Text', serif; font-weight: 700;">SAVED IDEAS</h3>
