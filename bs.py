@@ -6008,99 +6008,36 @@ elif st.session_state.current_page == "Episode Calendar":
 if 'show_legal' in st.session_state:
     @st.dialog("Legal Information")
     def show_legal_modal():
-        tab = st.session_state.show_legal
+        tab = st.session_state.show_legal  # This line defines 'tab'
         
+        # These if statements must be INSIDE the function (indented)
         if tab == "terms":
             st.markdown("""
             ## Terms of Service
             
             **Effective Date: August 22, 2025**
-            
-            ### 1. Acceptance of Terms
-            By using Shorthand Studios ("the Service"), you agree to be bound by these Terms of Service.
-            
-            ### 2. YouTube Terms of Service
-            **By using this application, you are also agreeing to be bound by the YouTube Terms of Service.**
-            
-            Please review the YouTube Terms of Service at: https://www.youtube.com/t/terms
-            
-            ### 3. Use of YouTube API Services
-            This application uses YouTube API Services to provide video search and analysis features.
-            Your use of YouTube content through our Service is subject to YouTube's Terms of Service.
-            
-            ### 4. Acceptable Use
-            You agree not to use the Service to violate any applicable laws or YouTube's policies.
+            # ... rest of terms content
             """)
             
         elif tab == "privacy":
             st.markdown("""
             ## Privacy Policy
-            
-            **Effective Date: August 22, 2025**
-            
-            ### 1. YouTube API Services
-            This application uses YouTube API Services to access and display YouTube content.
-            
-            ### 2. Google Privacy Policy
-            By using our Service, you are also subject to Google's Privacy Policy.
-            Please review it at: http://www.google.com/policies/privacy
-            
-            ### 3. Information We Access
-            Through the YouTube API, we access:
-            - Video titles, descriptions, and metadata
-            - View counts and statistics
-            - Channel information
-            - Video thumbnails
-            - Published dates
-            
-            ### 4. How We Use Your Information
-            We use YouTube API data solely to:
-            - Display search results for content research
-            - Show video statistics for analysis
-            - Provide competitor monitoring features
-            
-            ### 5. Data Storage and Retention
-            - YouTube API data is NOT stored permanently
-            - Video information is displayed only during your active session
-            - Session data is automatically cleared when you close the application
-            - We store API authorization tokens only for the duration of your session
-            - No YouTube data is cached or stored in any database
-            
-            ### 6. Data Sharing
-            We DO NOT share YouTube API data with third parties.
-            All data remains within the application for your use only.
-            
-            ### 7. Cookies and Tracking
-            This application may use session cookies to maintain your login state.
-            We do not use tracking cookies or allow third-party tracking.
-            
-            ### 8. Contact Information
-            For questions about this Privacy Policy or our data practices:
-            Email: privacy@shorthandstudios.com
+            # ... rest of privacy content
             """)
             
         elif tab == "contact":
             st.markdown("""
             ## Contact Information
-            
-            **Shorthand Studios**
-            
-            Email: support@shorthandstudios.com
-            Privacy Inquiries: privacy@shorthandstudios.com
-            
-            Project Number: 71223009754
-            
-            ### API Compliance
-            This application uses a single YouTube API project number: 71223009754
-            We do not use multiple project numbers for this API Client.
+            # ... rest of contact content
             """)
         
         if st.button("Close"):
             del st.session_state.show_legal
             st.rerun()
     
+    # Call the function to show the modal
     show_legal_modal()
-
+    
 # Simple text links that trigger the modal
 st.markdown("---")
 cols = st.columns([1,3,1,1,1,3,1])
