@@ -387,112 +387,6 @@ api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, ge
 # Hardcode Bailey Sarian as the creator
 creator_name = "Bailey Sarian"
 
-# Get API keys from environment variables
-api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key = get_api_keys()
-
-# Hardcode Bailey Sarian as the creator
-creator_name = "Bailey Sarian"
-
-# ============ ADD LOGIN PAGE HERE ============
-
-# Add this after your API keys initialization
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
-
-# Login page
-if not st.session_state.authenticated:
-    # Custom CSS for the login page
-    st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
-    
-    .login-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 300px;
-        text-align: center;
-    }
-    
-    .cursive-text {
-        font-family: 'Dancing Script', cursive;
-        font-size: 32px;
-        font-weight: 700;
-        color: #666666;
-        margin-bottom: 0;
-    }
-    
-    .bailey-text {
-        font-family: 'Crimson Text', serif;
-        font-size: 60px;
-        font-weight: 700;
-        color: #000000;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-top: -10px;
-        margin-bottom: 0;
-    }
-    
-    .crime-lab-text {
-        font-family: 'Crimson Text', serif;
-        font-size: 60px;
-        font-weight: 700;
-        color: #DC143C;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-top: -20px;
-        margin-bottom: 30px;
-    }
-    
-    .stTextInput > div > div > input {
-        text-align: center;
-        font-size: 18px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Create centered login form
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        st.markdown("""
-        <div class="login-container">
-            <p class="cursive-text">You are about to enter</p>
-            <h1 class="bailey-text">BAILEY SARIAN'S</h1>
-            <h1 class="crime-lab-text">CRIME LAB</h1>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Password input
-        password = st.text_input(
-            "Enter Password", 
-            type="password", 
-            placeholder="Enter password to continue...",
-            key="login_password",
-            label_visibility="collapsed"
-        )
-        
-        # Center the button
-        col_a, col_b, col_c = st.columns([1, 1, 1])
-        with col_b:
-            if st.button("ENTER", type="primary", use_container_width=True):
-                if password == "baileysarian":
-                    st.session_state.authenticated = True
-                    st.success("Access granted! Welcome to Bailey's Crime Lab")
-                    st.rerun()
-                else:
-                    st.error("Incorrect password. Please try again.")
-        
-        # Add a subtle hint or footer
-        st.markdown("""
-        <div style="text-align: center; margin-top: 30px; color: #999;">
-            <small>Authorized personnel only</small>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.stop()
-
 # ============ SIDEBAR NAVIGATION ============
 
 # Initialize current_page if it doesn't exist
@@ -1054,96 +948,59 @@ def search_with_perplexity(query, api_key, search_type="comprehensive"):
         return None
 
 def get_perplexity_case_analysis(case_name, perplexity_api_key):
-    """Get comprehensive case analysis using Perplexity's online model"""
+    """
+    Get comprehensive case analysis using Perplexity's online model
+    """
     if not perplexity_api_key:
         return None
     
     try:
-        import requests
-        import json
-        import re
+        from openai import OpenAI
         
-        url = "https://api.perplexity.ai/chat/completions"
+        client = OpenAI(
+            api_key=perplexity_api_key,
+            base_url="https://api.perplexity.ai"
+        )
         
-        headers = {
-            "Authorization": f"Bearer {perplexity_api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": "sonar",
-            "messages": [{
+        response = client.chat.completions.create(
+            model="sonar",
+            messages=[{
                 "role": "user",
-                "content": f"""Search for information about "{case_name}" ONLY in the context of:
-                - Murder cases
-                - Homicides
-                - Serial killers
-                - Missing persons (presumed dead)
-                - Unsolved mysteries involving death
-                - True crime cases
+                "content": f"""Provide comprehensive information about the {case_name} case.
                 
-                DO NOT include:
-                - Political cases
-                - Civil lawsuits
-                - Corporate fraud
-                - Non-violent crimes
-                - Living people (unless they are perpetrators/suspects in murder cases)
-                
-                IMPORTANT CITATION RULES:
-                - DO NOT use numbered citations like [1][2][3] in your response
-                - Instead, use inline source attribution like "according to FBI records" or "as reported by CNN"
-                - At the very end, add a "Sources:" section listing the sources you referenced
-                
-                If "{case_name}" is NOT associated with any murder/death/true crime case, respond with:
-                "No true crime case found for this name. This may be a political figure, civil case, or living person not associated with murder cases."
-                
-                If you find a TRUE CRIME case, include:
-                1. What happened (the murder/crime)
+                Include:
+                1. What happened (overview of the case)
                 2. When and where it occurred
-                3. Victim(s) - full names and ages if available
-                4. Suspect(s)/Perpetrator(s)
-                5. Current status (solved/unsolved/convicted)
-                6. Key evidence or mysteries
-                7. Recent updates
+                3. Key people involved (victims, suspects, investigators)
+                4. Timeline of events
+                5. Current status or resolution
+                6. Any mysteries or controversies
+                7. Recent updates or developments
                 
-                End with:
-                Sources:
-                - List your sources here
+                IMPORTANT: Instead of using numbered citations like [1][2][3], please include the actual source names inline (e.g., "according to Wikipedia" or "as reported by CNN") and then list all source URLs at the end under a "Sources:" section.
                 
-                Remember: This is for a true crime podcast. ONLY return information about murders, deaths, or violent crimes."""
+                Focus on factual, verified information from reliable sources."""
             }],
-            "temperature": 0.2,
-            "max_tokens": 2000
+            temperature=0.2,
+            max_tokens=2000
+        )
+        
+        content = response.choices[0].message.content
+        
+        # Process the content to remove the bracket citations since they're not clickable
+        import re
+        # Remove citations like [1], [2], [1][2], etc.
+        content = re.sub(r'\[\d+\](\[\d+\])*', '', content)
+        
+        return {
+            'overview': content
         }
         
-        response = requests.post(url, headers=headers, json=data)
-        
-        if response.status_code == 200:
-            result = response.json()
-            content = result['choices'][0]['message']['content']
-            
-            # Remove any remaining numbered citations like [1][2][3]
-            content = re.sub(r'\[\d+\](\[\d+\])*', '', content)
-            
-            # Check if no crime case was found
-            if "no true crime case found" in content.lower():
-                return {
-                    'overview': f"❌ **No True Crime Case Found**\n\n{content}\n\nTry searching for:\n- A different spelling\n- Adding context (e.g., 'victim' or 'murder')\n- Including location or year"
-                }
-            
-            return {
-                'overview': content
-            }
-        else:
-            print(f"Perplexity API error: {response.status_code} - {response.text}")
-            st.error(f"Perplexity API error: {response.status_code}")
-            return None
-            
     except Exception as e:
         print(f"Perplexity API error: {str(e)}")
         st.error(f"Perplexity API error: {str(e)}")
         return None
-            
+        
 def search_reddit_by_keywords(query, subreddits, limit=5):
   """Search Reddit for posts containing specific keywords"""
   all_results = []
@@ -3860,10 +3717,7 @@ if st.session_state.current_page == "Case Search":
 
         with source_tabs[1]:  # YouTube tab
             if youtube_count and youtube_count > 0:
-                st.markdown("Data provided by YouTube API Services")  # ADD HERE
                 st.write(f"Found {youtube_count:,} videos about this case")
-                st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-
                 
                 # Get actual YouTube videos if we have the API key
                 if youtube_api_key:
@@ -3946,7 +3800,6 @@ if st.session_state.current_page == "Case Search":
                                     
                                     with col1:
                                         st.markdown("#### Top 5 Regular Videos")
-                                        st.markdown("Data provided by YouTube API Services")
                                         if regular_videos:
                                             for video in regular_videos[:5]:
                                                 with st.container():
@@ -3993,7 +3846,6 @@ if st.session_state.current_page == "Case Search":
 
                                     with col2:
                                         st.markdown("#### Top 5 Shorts")
-                                        st.markdown("Data provided by YouTube API Services")
                                         if shorts:
                                             for short in shorts[:5]:
                                                 with st.container():
@@ -4129,105 +3981,128 @@ if st.session_state.current_page == "Case Search":
             if st.button("Generate Episode Strategy", key="generate_strategy", type="primary", use_container_width=True):
                 with st.spinner("Creating episode strategy..."):
                     
+                    # SET THE OPENAI API KEY HERE
+                    import openai
+                    openai.api_key = api_key
+                    
                     # Get actual Wikipedia article content
                     wiki_article_content = ""
-                    if 'wikipedia_data' in st.session_state and st.session_state.wikipedia_data and st.session_state.wikipedia_data.get('article_title'):
-                        # ... (your Wikipedia fetching code) ...
-                        pass
+                    if wikipedia_data and wikipedia_data.get('article_title'):
+                        # Fetch the actual Wikipedia article text
+                        wiki_url = "https://en.wikipedia.org/w/api.php"
+                        wiki_params = {
+                            "action": "query",
+                            "format": "json",
+                            "titles": wikipedia_data['article_title'],
+                            "prop": "extracts",
+                            "exintro": True,
+                            "explaintext": True,
+                            "exsectionformat": "plain",
+                            "exchars": 3000
+                        }
+                        
+                        try:
+                            wiki_response = requests.get(wiki_url, params=wiki_params, timeout=10)
+                            if wiki_response.status_code == 200:
+                                wiki_data = wiki_response.json()
+                                pages = wiki_data.get("query", {}).get("pages", {})
+                                for page_id, page_data in pages.items():
+                                    if "extract" in page_data:
+                                        wiki_article_content = f"Wikipedia article about {wikipedia_data['article_title']}:\n{page_data['extract'][:2500]}\n\n"
+                        except:
+                            pass
                     
-                    # Get web search results context
+                    # ADD WEB SEARCH RESULTS CONTEXT
                     web_search_context = ""
-                    web_search_results = st.session_state.get('web_search_results', None)
+                    web_search_results = st.session_state.get('web_search_results', None)  # Get from session state
                     if web_search_results:
+                        # Truncate if too long, but keep the most important parts
                         web_content = web_search_results[:3000] if len(web_search_results) > 3000 else web_search_results
                         web_search_context = f"Web Search Information:\n{web_content}\n\n"
                     
-                    # Build wiki context from wikidata results
+                    # Gather context from all sources
                     wiki_context = ""
-                    if 'wikidata_results' in st.session_state and st.session_state.wikidata_results:
-                        wiki_entries = [f"- {r['label']}: {r['description']}" for r in st.session_state.wikidata_results[:3]]
+                    if wikidata_results:
+                        wiki_entries = [f"- {r['label']}: {r['description']}" for r in wikidata_results[:3]]
                         wiki_context = "Wikipedia/Wikidata entries found:\n" + "\n".join(wiki_entries) + "\n"
                     
-                    # Build Reddit context
+                    news_context = ""
+                    if gdelt_results or nyt_results:
+                        recent_headlines = [article['title'] for article in gdelt_results[:5]]
+                        if nyt_results:
+                            recent_headlines.extend([article['headline'] for article in nyt_results[:3]])
+                        news_context = "Recent news headlines:\n" + "\n".join([f"- {h}" for h in recent_headlines[:8]]) + "\n"
+                    
                     reddit_context = ""
-                    if 'reddit_results' in st.session_state and st.session_state.reddit_results:
+                    if reddit_results:
                         top_posts = [f"- {post['data']['title']} (r/{post['data'].get('subreddit', 'unknown')}, {post['data']['score']} upvotes)" 
-                                    for post in st.session_state.reddit_results[:5]]
+                                    for post in reddit_results[:5]]
                         reddit_context = "Top Reddit discussions:\n" + "\n".join(top_posts) + "\n"
                     
-                    # Get YouTube count
-                    youtube_count = st.session_state.get('youtube_count', 0)
-                    
-                    # Get case search term
-                    case_search = st.session_state.get('search_query', 'Unknown Case')
+                    pageview_context = ""
+                    if wikipedia_data and wikipedia_data['last_7_days'] > 0:
+                        pageview_context = f"Wikipedia trending: {wikipedia_data['trend_percentage']:.1f}% change, {wikipedia_data['last_7_days']:,} views last week"
                     
                     prompt = f"""Create a Murder, Mystery & Makeup episode strategy for Bailey Sarian based on this comprehensive research:
-                    
-                    CASE: {case_search}
-                    
-                    DATA SUMMARY:
-                    - YouTube Videos: {youtube_count} ({"oversaturated" if youtube_count > 200 else "good opportunity" if youtube_count < 50 else "moderate coverage"})
-                    - Reddit Discussions: {len(st.session_state.get('reddit_results', []))}
-                    
-                    {web_search_context}
-                    {wiki_article_content}
-                    {wiki_context}
-                    {reddit_context}
-                    
-                    Based on ALL this research (especially the web search information), provide:
-                    1. EPISODE TITLE: Catchy MMM-style title that hasn't been overused
-                    2. UNIQUE ANGLE: What fresh perspective can Bailey bring given the existing coverage?
-                    3. COLD OPEN: First 30 seconds hook based on the most shocking detail from the sources
-                    4. MAKEUP LOOK: What style pairs with this story
-                    5. STORY STRUCTURE: 
-                        - Opening: Set the scene (use specific details from web search)
-                        - Act 1: Build up (use specific details from all sources)
-                        - Act 2: The crime (incorporate facts from web search and Wikipedia)
-                        - Act 3: Investigation/aftermath
-                        - Conclusion: Bailey's take
-                    6. KEY TALKING POINTS: Based on what Reddit/news are discussing
-                    7. CONTROVERSY/DISCUSSION POINTS: What are people debating about this case?
-                    8. LESSER-KNOWN FACTS: Pull interesting details from the web search that aren't widely covered
-                    9. RESEARCH GAPS: What information is missing that Bailey should research further?
-                    10. VISUAL ELEMENTS: Specific photos and graphics needed
-                    11. ESTIMATED RUNTIME: Episode length
-                    12. COMPETITION ANALYSIS: How to differentiate from the {youtube_count} existing videos
-                    13. FACT CHECK LIST: Key facts from web search and Wikipedia to verify
-                    
-                    Make it specific to Bailey's casual, engaging style. Use actual details from ALL sources, especially unique information from the web search."""
-                    
+
+            CASE: {case_search}
+
+            DATA SUMMARY:
+            - YouTube Videos: {youtube_count} ({"oversaturated" if youtube_count > 200 else "good opportunity" if youtube_count < 50 else "moderate coverage"})
+            - News Articles: {len(gdelt_results) + len(nyt_results)}
+            - Reddit Discussions: {len(reddit_results)}
+            - {pageview_context}
+
+            {web_search_context}
+
+            {wiki_article_content}
+
+            {wiki_context}
+
+            {news_context}
+
+            {reddit_context}
+
+            Based on ALL this research (especially the web search information), provide:
+            1. EPISODE TITLE: Catchy MMM-style title that hasn't been overused
+            2. UNIQUE ANGLE: What fresh perspective can Bailey bring given the existing coverage?
+            3. COLD OPEN: First 30 seconds hook based on the most shocking detail from the sources
+            4. MAKEUP LOOK: What style pairs with this story
+            5. STORY STRUCTURE: 
+                - Opening: Set the scene (use specific details from web search)
+                - Act 1: Build up (use specific details from all sources)
+                - Act 2: The crime (incorporate facts from web search and Wikipedia)
+                - Act 3: Investigation/aftermath
+                - Conclusion: Bailey's take
+            6. KEY TALKING POINTS: Based on what Reddit/news are discussing
+            7. CONTROVERSY/DISCUSSION POINTS: What are people debating about this case?
+            8. LESSER-KNOWN FACTS: Pull interesting details from the web search that aren't widely covered
+            9. RESEARCH GAPS: What information is missing that Bailey should research further?
+            10. VISUAL ELEMENTS: Specific photos and graphics needed
+            11. ESTIMATED RUNTIME: Episode length
+            12. COMPETITION ANALYSIS: How to differentiate from the {youtube_count} existing videos
+            13. FACT CHECK LIST: Key facts from web search and Wikipedia to verify
+
+            Make it specific to Bailey's casual, engaging style. Use actual details from ALL sources, especially unique information from the web search."""
+
                     try:
-                        # Use requests instead of OpenAI client
-                        import requests
-                        import json
+                        from openai import OpenAI
+                        client = OpenAI(api_key=api_key)
                         
-                        url = "https://api.openai.com/v1/chat/completions"
+                        response = client.chat.completions.create(
+                            model="gpt-4",
+                            messages=[{"role": "user", "content": prompt}],
+                            max_tokens=1500,
+                            timeout=30
+                        )
                         
-                        headers = {
-                            "Authorization": f"Bearer {api_key}",
-                            "Content-Type": "application/json"
-                        }
+                        strategy = response.choices[0].message.content
+                        st.session_state.generated_strategy = strategy
+                        st.session_state.show_strategy = True
                         
-                        data = {
-                            "model": "gpt-4",
-                            "messages": [{"role": "user", "content": prompt}],
-                            "max_tokens": 1500,
-                            "temperature": 0.7
-                        }
-                        
-                        response = requests.post(url, headers=headers, json=data, timeout=30)
-                        
-                        if response.status_code == 200:
-                            result = response.json()
-                            strategy = result['choices'][0]['message']['content']
-                            st.session_state.generated_strategy = strategy
-                            st.session_state.show_strategy = True
-                        else:
-                            st.error(f"Error: {response.status_code} - {response.text}")
-                            
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
-
+            
             # Display strategy outside the button
             if st.session_state.show_strategy and st.session_state.generated_strategy:
                 st.markdown("---")
@@ -4636,9 +4511,6 @@ elif st.session_state.current_page == "True Crime Podcasts":
 
 elif st.session_state.current_page == "YouTube Competitors":    
     st.markdown("### YouTube Competitor Monitoring")
-    st.markdown("Data provided by YouTube API Services")  # ADD HERE
-    st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-
     
     # Define competitors with their channel IDs
     COMPETITORS = {
@@ -4797,9 +4669,7 @@ elif st.session_state.current_page == "YouTube Competitors":
                         all_videos.sort(key=lambda x: x['views'], reverse=True)
                         
                         st.success(f"Found {len(all_videos)} videos from {len(selected_competitors)} channels (sorted by views)")
-                        st.markdown("Data provided by YouTube API Services")  # ADD HERE
-                        st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-
+                        st.session_state.competitor_videos = all_videos
                         
                         # Display results
                         for i, video in enumerate(all_videos, 1):
@@ -4846,10 +4716,11 @@ elif st.session_state.current_page == "YouTube Competitors":
                                         else:
                                             likes_str = str(video['likes'])
                                         st.metric("Likes", likes_str)
-
+                                    
                                     with col_c:
-                                        st.metric("Comments", video['comments'])
-
+                                        engagement = (video['likes'] / video['views'] * 100) if video['views'] > 0 else 0
+                                        st.metric("Engagement", f"{engagement:.1f}%")
+                                    
                                     # Duration
                                     if is_short:
                                         st.caption(f"Duration: {video['duration_seconds']} seconds (Short)")
@@ -4987,9 +4858,6 @@ elif st.session_state.current_page == "YouTube Competitors":
                         search_results.sort(key=lambda x: x['views'], reverse=True)
                         
                         st.success(f"Found {len(search_results)} videos about '{search_query}'")
-                        st.markdown("Data provided by YouTube API Services")  # ADD HERE
-                        st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-
                         
                         # Display search results
                         for i, video in enumerate(search_results, 1):
@@ -5034,10 +4902,17 @@ elif st.session_state.current_page == "YouTube Competitors":
                                     col_a, col_b, col_c = st.columns(3)
                                     with col_a:
                                         st.metric("Views", views_display)
+                                    
                                     with col_b:
+                                        if video['likes'] >= 1000:
+                                            likes_str = f"{video['likes']/1000:.0f}K"
+                                        else:
+                                            likes_str = str(video['likes'])
                                         st.metric("Likes", likes_str)
+                                    
                                     with col_c:
-                                        st.metric("Comments", str(video['comments']))
+                                        engagement = (video['likes'] / video['views'] * 100) if video['views'] > 0 else 0
+                                        st.metric("Engagement", f"{engagement:.1f}%")
                                     
                                     # Show relevant part of description
                                     if video['description']:
@@ -5230,180 +5105,202 @@ elif st.session_state.current_page == "Movies & TV Shows":
             else:
                 search_year = None
         
-        if st.button("SEARCH", key="search_crime_titles", type="primary") and search_query:
-            with st.spinner(f"Searching for '{search_query}'..."):
-                # First do the search
-                results = search_tmdb(tmdb_key, query=search_query, media_type=search_media_type, year=search_year)
-                
-                if results and results.get('results'):
-                    # Store raw results for sorting
-                    st.session_state.crime_search_results_raw = results['results']
-                    st.session_state.crime_search_query_used = search_query
-                    st.session_state.crime_search_media_type_used = search_media_type
-                    st.success(f"Found {len(results['results'])} results for '{search_query}'")
-                else:
-                    st.warning("No results found. Try different keywords.")
-    
-    # If we have search results, show sorting options
-    if 'crime_search_results_raw' in st.session_state and st.session_state.crime_search_results_raw:
-        st.markdown("---")
-        st.markdown(f"**Results for: '{st.session_state.crime_search_query_used}'**")
-        
-        # Sorting options
-        sort_options = [
-            ("popularity", "Most Popular"),
-            ("vote_average", "Highest Rated"),
-            ("vote_count", "Most Voted"),
-            ("release_date", "Newest First"),
-            ("title", "Alphabetical")
-        ]
-        
-        sort_by = st.selectbox(
-            "Sort Results By",
-            options=[s[0] for s in sort_options],
-            format_func=lambda x: dict(sort_options).get(x, x),
-            key="crime_search_sort"
-        )
-        
-        # Sort the results
-        sorted_results = sorted(
-            st.session_state.crime_search_results_raw,
-            key=lambda x: x.get(sort_by, 0) if sort_by != 'title' else (x.get('title') or x.get('name', '')),
-            reverse=(sort_by != 'title')
-        )
-        
-        # Get genres for the selected media type
-        genres = get_tmdb_genres(tmdb_key, st.session_state.crime_search_media_type_used)
-        
-        # Display sorted results
-        for i, item in enumerate(sorted_results[:20], 1):
-            title = item.get('title') or item.get('name', 'Unknown')
-            release_date = item.get('release_date') or item.get('first_air_date', 'Unknown')
+    if st.button("SEARCH", key="search_cases_btn", type="primary", use_container_width=True):
+        if not case_search:
+            st.warning("Please enter a search term")
+        else:
+            # Create a progress bar and status text (no spinner)
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            with st.expander(f"{i:02d} | {title} ({release_date[:4] if release_date != 'Unknown' and len(release_date) >= 4 else 'N/A'})", expanded=False):
-                col1, col2 = st.columns([1, 3])
-                
-                with col1:
-                    if item.get('poster_path'):
-                        poster_url = f"https://image.tmdb.org/t/p/w200{item['poster_path']}"
-                        st.image(poster_url, width=150)
-                
-                with col2:
-                    # Metrics
-                    st.markdown(f"""
-                    <div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
-                        <div>
-                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_average', 0):.1f}</p>
-                            <p style="font-size: 12px; text-transform: uppercase; color: #666;">Rating</p>
-                        </div>
-                        <div>
-                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_count', 0):,}</p>
-                            <p style="font-size: 12px; text-transform: uppercase; color: #666;">Votes</p>
-                        </div>
-                        <div>
-                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('popularity', 0):.0f}</p>
-                            <p style="font-size: 12px; text-transform: uppercase; color: #666;">Popularity</p>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.write(f"**Overview:** {item.get('overview', 'No overview available.')}")
-                    
-                    # Get genre names
-                    genre_names = [genres.get(gid, 'Unknown') for gid in item.get('genre_ids', [])]
-                    if genre_names:
-                        st.write(f"**Genres:** {', '.join(genre_names)}")
-                    
-                    # TMDB link
-                    media_type_for_url = "movie" if 'title' in item else "tv"
-                    tmdb_url = f"https://www.themoviedb.org/{media_type_for_url}/{item.get('id')}"
-                    st.markdown(f"[View on TMDB]({tmdb_url})")
+            # Search all sources with progress updates
+            status_text.text("Searching Wikipedia...")
+            progress_bar.progress(10)
+            wikidata_results = search_wikidata(case_search, 10)
             
-# Add this new page to your sidebar navigation
-elif st.session_state.current_page == "Legal":
-    st.markdown("### Terms of Service & Privacy Policy")
-    
-    tabs = st.tabs(["Terms of Service", "Privacy Policy", "Contact"])
-    
-    with tabs[0]:
-        st.markdown("""
-        ## Shorthand Studios - Terms of Service
-        
-        **Effective Date: August 22, 2025**
-        
-        ### 1. Acceptance of Terms
-        By using Shorthand Studios ("the Service"), you agree to be bound by these Terms of Service.
-        
-        ### 2. YouTube Terms of Service
-        **By using this application, you are also agreeing to be bound by the YouTube Terms of Service.**
-        
-        Please review the YouTube Terms of Service at: https://www.youtube.com/t/terms
-        
-        ### 3. Use of YouTube API Services
-        This application uses YouTube API Services to provide video search and analysis features.
-        Your use of YouTube content through our Service is subject to YouTube's Terms of Service.
-        
-        ### 4. Acceptable Use
-        You agree not to use the Service to violate any applicable laws or YouTube's policies.
-        """)
-    
-    with tabs[1]:
-        st.markdown("""
-        ## Privacy Policy
-        
-        **Effective Date: August 22, 2025**
-        
-        ### 1. YouTube API Services
-        This application uses YouTube API Services to access and display YouTube content.
-        
-        ### 2. Google Privacy Policy
-        By using our Service, you are also subject to Google's Privacy Policy.
-        Please review it at: http://www.google.com/policies/privacy
-        
-        ### 3. Information We Access
-        Through the YouTube API, we access:
-        - Video titles, descriptions, and metadata
-        - View counts and statistics
-        - Channel information
-        - Video thumbnails
-        - Published dates
-        
-        ### 4. How We Use Your Information
-        We use YouTube API data solely to:
-        - Display search results for content research
-        - Show video statistics for analysis
-        - Provide competitor monitoring features
-        
-        ### 5. Data Storage
-        - We DO NOT permanently store YouTube data
-        - Video information is only displayed during your session
-        - We store API authorization tokens only as necessary for active sessions
-        
-        ### 6. Data Sharing
-        We DO NOT share YouTube API data with third parties.
-        All data remains within the application for your use only.
-        
-        ### 7. Cookies and Tracking
-        This application may use session cookies to maintain your login state.
-        We do not use tracking cookies or allow third-party tracking.
-        
-        ### 8. Contact Information
-        For questions about this Privacy Policy or our data practices:
-        Email: privacy@shorthandstudios.com
-        """)
-    
-    with tabs[2]:
-        st.markdown("""
-        ## Contact Information
-        
-        **Shorthand Studios**
-        
-        Email: support@shorthandstudios.com
-        Privacy Inquiries: privacy@shorthandstudios.com
-        
-        Project Number: 71223009754
-        """)
+            status_text.text("Checking YouTube...")
+            progress_bar.progress(25)
+            youtube_count = count_youtube_videos(case_search, youtube_api_key) if youtube_api_key else 0
+            
+            status_text.text("Analyzing case with AI...")
+            progress_bar.progress(40)
+            # Use Perplexity for comprehensive case research
+            web_search_results = None
+            if perplexity_api_key:
+                # Get comprehensive case information from Perplexity
+                perplexity_data = get_perplexity_case_analysis(case_search, perplexity_api_key)
+                
+                if perplexity_data:
+                    # Format the results for display
+                    formatted_results = []
+                    
+                    formatted_results.append("## Case Overview\n")
+                    formatted_results.append(perplexity_data.get('overview', 'No overview available'))
+                    formatted_results.append("\n")
+                    
+                    if perplexity_data.get('recent_updates'):
+                        formatted_results.append("## Recent Updates\n")
+                        formatted_results.append(perplexity_data.get('recent_updates'))
+                        formatted_results.append("\n")
+                    
+                    if perplexity_data.get('evidence_mysteries'):
+                        formatted_results.append("## Evidence & Mysteries\n")
+                        formatted_results.append(perplexity_data.get('evidence_mysteries'))
+                        formatted_results.append("\n")
+                    
+                    if perplexity_data.get('media_analysis'):
+                        formatted_results.append("## Media Coverage Analysis\n")
+                        formatted_results.append(perplexity_data.get('media_analysis'))
+                    
+                    web_search_results = "\n".join(formatted_results)
+            else:
+                pass  # Don't show warning during search
 
+            status_text.text("Getting Wikipedia pageviews...")
+            progress_bar.progress(60)
+            # Get Wikipedia pageviews
+            wikipedia_data = get_wikipedia_pageviews(case_search)
+            
+            status_text.text("Searching Reddit discussions...")
+            progress_bar.progress(75)
+            # Search Reddit - ALL of Reddit for titles containing the search term
+            reddit_results = []
+            try:
+                # Use Pushshift API (Reddit archive) for better search
+                pushshift_url = "https://api.pushshift.io/reddit/search/submission/"
+                
+                # Try Pushshift first (better search)
+                params = {
+                    'q': case_search,
+                    'size': 100,
+                    'sort': 'score',
+                    'sort_type': 'desc'
+                }
+                
+                try:
+                    response = requests.get(pushshift_url, params=params, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        for item in data.get('data', []):
+                            # Convert Pushshift format to Reddit format
+                            reddit_results.append({
+                                'data': {
+                                    'title': item.get('title', ''),
+                                    'selftext': item.get('selftext', ''),
+                                    'subreddit': item.get('subreddit', ''),
+                                    'score': item.get('score', 0),
+                                    'num_comments': item.get('num_comments', 0),
+                                    'permalink': f"/r/{item.get('subreddit')}/comments/{item.get('id')}/",
+                                    'url': item.get('url', ''),
+                                    'created_utc': item.get('created_utc', 0)
+                                }
+                            })
+                except:
+                    pass  # Pushshift might be down, continue to Reddit search
+                
+                # Update progress
+                progress_bar.progress(85)
+                
+                # If Pushshift didn't work or found nothing, use Reddit search with better parameters
+                if not reddit_results:
+                    # Search variations to improve results
+                    search_variations = [
+                        case_search,  # Full name
+                        ' '.join(case_search.split()[:2]) if len(case_search.split()) > 2 else case_search,  # First two words
+                        case_search.split()[-1] if len(case_search.split()) > 1 else case_search,  # Last word only
+                    ]
+                    
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+                    }
+                    
+                    for search_term in search_variations:
+                        # Search across all Reddit
+                        search_url = "https://www.reddit.com/search.json"
+                        params = {
+                            'q': f'{search_term} (murder OR killer OR crime OR death)',  # Add context
+                            'sort': 'relevance',
+                            'limit': 100,
+                            't': 'all',
+                            'type': 'link',
+                            'raw_json': 1
+                        }
+                        
+                        time.sleep(1)
+                        response = requests.get(search_url, headers=headers, params=params, timeout=15)
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            if 'data' in data and 'children' in data['data']:
+                                for post in data['data']['children']:
+                                    post_data = post['data']
+                                    title_lower = post_data['title'].lower()
+                                    
+                                    # Check if relevant to our search
+                                    if any(word.lower() in title_lower for word in case_search.split()):
+                                        reddit_results.append(post)
+                        
+                        if reddit_results:
+                            break  # Stop if we found results
+                    
+                    # Update progress
+                    progress_bar.progress(90)
+                    
+                    # Last resort: search specific true crime subreddits
+                    if not reddit_results:
+                        crime_subreddits = ["serialkillers", "TrueCrime", "UnresolvedMysteries"]
+                        
+                        for subreddit in crime_subreddits:
+                            url = f"https://www.reddit.com/r/{subreddit}/search.json"
+                            params = {
+                                'q': case_search.split()[-1],  # Just last name
+                                'restrict_sr': 'on',
+                                'sort': 'relevance',
+                                'limit': 50,
+                                't': 'all',
+                                'raw_json': 1
+                            }
+                            
+                            response = requests.get(url, headers=headers, params=params, timeout=10)
+                            if response.status_code == 200:
+                                data = response.json()
+                                for post in data.get('data', {}).get('children', []):
+                                    reddit_results.append(post)
+                
+                # Remove duplicates and sort by score
+                seen = set()
+                unique_results = []
+                for post in reddit_results:
+                    post_id = post['data'].get('id', post['data'].get('title', ''))
+                    if post_id not in seen:
+                        seen.add(post_id)
+                        unique_results.append(post)
+                
+                reddit_results = sorted(unique_results, key=lambda x: x['data'].get('score', 0), reverse=True)[:20]
+                
+            except Exception as e:
+                print(f"Reddit search error: {e}")
+            
+            # Complete the progress
+            progress_bar.progress(100)
+            status_text.text("Search complete!")
+            
+            # Hide progress indicators after a short delay
+            time.sleep(0.5)
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Store all results in session state
+            st.session_state.search_performed = True
+            st.session_state.search_query = case_search
+            st.session_state.wikidata_results = wikidata_results
+            st.session_state.gdelt_results = []
+            st.session_state.nyt_results = []
+            st.session_state.youtube_count = youtube_count
+            st.session_state.wikipedia_data = wikipedia_data
+            st.session_state.reddit_results = reddit_results
+            st.session_state.web_search_results = web_search_results
+            st.session_state.case_search = case_search    
 elif st.session_state.current_page == "Saved Ideas":
     st.markdown("""
     <h3 style="font-family: 'Crimson Text', serif; font-weight: 700;">SAVED IDEAS</h3>
@@ -5893,62 +5790,6 @@ elif st.session_state.current_page == "Episode Calendar":
         else:
             st.info("No data to analyze. Start scheduling episodes!")
 
-# At the bottom of your app (before or after the footer HTML)
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("Terms of Service", key="footer_tos"):
-        st.session_state.show_legal = "terms"
-
-with col2:
-    if st.button("Privacy Policy", key="footer_privacy"):
-        st.session_state.show_legal = "privacy"
-
-with col3:
-    if st.button("Contact", key="footer_contact"):
-        st.session_state.show_legal = "contact"
-
-# Display the legal modal/popup if clicked
-if 'show_legal' in st.session_state:
-    @st.dialog("Legal Information")
-    def show_legal_modal():
-        tab = st.session_state.show_legal
-        
-        if tab == "terms":
-            st.markdown("""
-            ## Terms of Service
-            
-            **Effective Date: August 22, 2025**
-            
-            ### 1. Acceptance of Terms
-            By using Shorthand Studios ("the Service"), you agree to be bound by these Terms of Service.
-            
-            ### 2. YouTube Terms of Service
-            **By using this application, you are also agreeing to be bound by the YouTube Terms of Service.**
-            
-            Please review the YouTube Terms of Service at: https://www.youtube.com/t/terms
-            # ... rest of your terms content
-            """)
-            
-        elif tab == "privacy":
-            st.markdown("""
-            ## Privacy Policy
-            # ... your privacy policy content
-            """)
-            
-        elif tab == "contact":
-            st.markdown("""
-            ## Contact Information
-            # ... your contact content
-            """)
-        
-        if st.button("Close"):
-            del st.session_state.show_legal
-            st.rerun()
-    
-    show_legal_modal()
-
-# Your existing footer HTML (now just for styling)
 st.markdown("""
 <div class="footer">
   <div class="brand">SHORTHAND STUDIOS</div>
