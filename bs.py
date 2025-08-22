@@ -6006,219 +6006,220 @@ elif st.session_state.current_page == "Episode Calendar":
 
 # Display the legal modal/popup if clicked (only if triggered from elsewhere)
 if 'show_legal' in st.session_state:
-    @st.dialog("Legal Information")
-    def show_legal_modal():
-        tab = st.session_state.show_legal
+    with st.container():
+        @st.dialog("Legal Information")
+        def show_legal_modal():
+            tab = st.session_state.show_legal
+            
+            if tab == "terms":
+                st.markdown("""
+                ## Terms of Service
+                
+                **Effective Date: August 22, 2025**
+                
+                ### 1. Acceptance of Terms
+                By accessing or using Bailey's Crime Lab ("the Service", "the Application", or "the API Client"), you agree to be bound by these Terms of Service.
+                
+                ### 2. YouTube Terms of Service - REQUIRED
+                **IMPORTANT: By using this application, you are agreeing to be bound by the YouTube Terms of Service.**
+                
+                You must review and accept YouTube's Terms of Service at: https://www.youtube.com/t/terms
+                
+                Your use of YouTube content through our Service is subject to YouTube's Terms of Service. If you do not agree to YouTube's Terms of Service, you may not use this application.
+                
+                ### 3. Use of YouTube API Services
+                This application uses YouTube API Services to:
+                - Search for and display YouTube videos
+                - Show video statistics and metadata
+                - Analyze competitor channels
+                - Display video thumbnails and information
+                
+                ### 4. Acceptable Use
+                You agree to:
+                - Comply with all applicable laws and regulations
+                - Not violate YouTube's Terms of Service or Community Guidelines
+                - Not use the Service for any illegal or unauthorized purpose
+                - Not attempt to bypass any security measures
+                
+                ### 5. Termination
+                We reserve the right to terminate or suspend access to our Service immediately, without prior notice, for any breach of these Terms.
+                
+                ### 6. Changes to Terms
+                We reserve the right to modify these terms at any time. Continued use of the Service constitutes acceptance of updated terms.
+                
+                ### 7. Contact
+                For questions about these Terms of Service:
+                Email: support@shorthandstudios.com
+                """)
+                
+            elif tab == "privacy":
+                st.markdown("""
+                ## Privacy Policy
+                
+                **Effective Date: August 22, 2025**
+                **Last Updated: August 22, 2025**
+                
+                Bailey's Crime Lab ("we", "our", or "the Service") is committed to protecting your privacy. This Privacy Policy explains how we handle information when you use our application.
+                
+                ### 1. YouTube API Services Disclosure
+                **This application uses YouTube API Services.** By using this application, you acknowledge and agree that your use is also subject to Google's Privacy Policy and YouTube's Terms of Service.
+                
+                ### 2. Google Privacy Policy
+                By using our Service, you are also bound by Google's Privacy Policy, which can be found at:
+                **http://www.google.com/policies/privacy**
+                
+                Please review Google's Privacy Policy to understand how Google handles your information.
+                
+                ### 3. Information We Access Through YouTube API
+                When you use our Service, we access the following data through YouTube API Services:
+                
+                **API Data We Access:**
+                - Video titles and descriptions
+                - Video view counts and statistics
+                - Video publish dates and timestamps
+                - Channel names and identifiers
+                - Video thumbnails and preview images
+                - Video duration and metadata
+                - Public comments and likes counts
+                - Search results based on your queries
+                
+                **We DO NOT access:**
+                - Your personal YouTube account information
+                - Your YouTube watch history
+                - Your private playlists or subscriptions
+                - Any private or unlisted videos
+                
+                ### 4. How We Collect Information
+                **Direct Collection:**
+                - Search queries you enter in the application
+                - Cases or topics you choose to research
+                - Login credentials (password for app access only, not YouTube login)
+                
+                **Automatic Collection:**
+                - Session information while you use the app
+                - Temporary usage data during your session
+                
+                ### 5. How We Use Your Information
+                We use the accessed information solely to:
+                - Display YouTube search results relevant to your queries
+                - Show video statistics for research purposes
+                - Provide competitor analysis features
+                - Display trending content analysis
+                - Generate episode strategies based on search data
+                
+                **We DO NOT:**
+                - Store YouTube data permanently
+                - Create user profiles from YouTube data
+                - Share YouTube data with third parties
+                - Use data for advertising purposes
+                
+                ### 6. Data Storage and Retention
+                **Session-Only Storage:**
+                - YouTube API data is displayed in real-time and NOT stored permanently
+                - All data is session-based and cleared when you close the application
+                - Search results are temporary and exist only during your active session
+                
+                **What We Store:**
+                - API authorization tokens (only for session duration)
+                - Your app login status (session only)
+                - Temporary search queries (cleared after session)
+                
+                **What We DON'T Store:**
+                - YouTube video data
+                - User viewing history
+                - Personal information from YouTube
+                - Any cached YouTube content
+                
+                ### 7. Data Sharing
+                **We DO NOT share your information with third parties**, including:
+                - No sharing of YouTube API data
+                - No selling of user information
+                - No sharing with advertisers
+                - No sharing with data brokers
+                
+                **Limited Sharing:**
+                We may share information only when:
+                - Required by law or legal process
+                - Necessary to protect our rights or safety
+                - You explicitly consent to sharing
+                
+                ### 8. Cookies and Tracking Technologies
+                **Our Use of Cookies:**
+                - We use session cookies to maintain your login state
+                - Session cookies are temporary and deleted when you close your browser
+                - We do NOT use tracking cookies
+                - We do NOT use third-party analytics cookies
+                - We do NOT allow third-party tracking
+                
+                **Browser Storage:**
+                - We do NOT use localStorage or sessionStorage for YouTube data
+                - All data is maintained in server session memory only
+                
+                ### 9. Third-Party Services
+                This application integrates with:
+                - YouTube API Services (governed by Google's Privacy Policy)
+                - Other research APIs (Perplexity, Wikipedia, Reddit) for case research
+                
+                Each third-party service has its own privacy policy:
+                - Google/YouTube: http://www.google.com/policies/privacy
+                - Other services: Available on their respective websites
+                
+                ### 10. Children's Privacy
+                Our Service is not directed to children under 13. We do not knowingly collect information from children under 13. If you are a parent and believe your child has provided us with information, please contact us.
+                
+                ### 11. Your Rights
+                You have the right to:
+                - Stop using the Service at any time
+                - Request information about data practices
+                - Contact us with privacy concerns
+                
+                Since we don't store personal data, there is no stored data to delete or export.
+                
+                ### 12. Security
+                We implement appropriate security measures to protect against unauthorized access during your session. However, no internet transmission is 100% secure.
+                
+                ### 13. Changes to This Policy
+                We may update this Privacy Policy from time to time. The "Last Updated" date will reflect any changes. Continued use after changes constitutes acceptance.
+                
+                ### 14. Contact Information
+                For privacy-related questions or concerns:
+                
+                **Privacy Contact:**
+                Email: privacy@shorthandstudios.com
+                
+                **General Support:**
+                Email: support@shorthandstudios.com
+                
+                **Mailing Address:**
+                Shorthand Studios
+                [Your Address]
+                [City, State ZIP]
+                
+                ### 15. Compliance Statement
+                This Privacy Policy is designed to comply with:
+                - YouTube API Services Terms of Service
+                - Google Privacy Requirements
+                - Applicable data protection laws
+                
+                **API Project Number:** 71223009754
+                **Single Project Confirmation:** We use only one YouTube API project number for this application.
+                """)
+                
+            elif tab == "contact":
+                st.markdown("""
+                ## Contact Information
+                
+                **Shorthand Studios**
+                
+                Email: support@shorthandstudios.com
+                Privacy Inquiries: privacy@shorthandstudios.com
+                """)
+            
+            if st.button("Close"):
+                del st.session_state.show_legal
+                st.rerun()
         
-        if tab == "terms":
-            st.markdown("""
-            ## Terms of Service
-            
-            **Effective Date: August 22, 2025**
-            
-            ### 1. Acceptance of Terms
-            By accessing or using Bailey's Crime Lab ("the Service", "the Application", or "the API Client"), you agree to be bound by these Terms of Service.
-            
-            ### 2. YouTube Terms of Service - REQUIRED
-            **IMPORTANT: By using this application, you are agreeing to be bound by the YouTube Terms of Service.**
-            
-            You must review and accept YouTube's Terms of Service at: https://www.youtube.com/t/terms
-            
-            Your use of YouTube content through our Service is subject to YouTube's Terms of Service. If you do not agree to YouTube's Terms of Service, you may not use this application.
-            
-            ### 3. Use of YouTube API Services
-            This application uses YouTube API Services to:
-            - Search for and display YouTube videos
-            - Show video statistics and metadata
-            - Analyze competitor channels
-            - Display video thumbnails and information
-            
-            ### 4. Acceptable Use
-            You agree to:
-            - Comply with all applicable laws and regulations
-            - Not violate YouTube's Terms of Service or Community Guidelines
-            - Not use the Service for any illegal or unauthorized purpose
-            - Not attempt to bypass any security measures
-            
-            ### 5. Termination
-            We reserve the right to terminate or suspend access to our Service immediately, without prior notice, for any breach of these Terms.
-            
-            ### 6. Changes to Terms
-            We reserve the right to modify these terms at any time. Continued use of the Service constitutes acceptance of updated terms.
-            
-            ### 7. Contact
-            For questions about these Terms of Service:
-            Email: support@shorthandstudios.com
-            """)
-            
-        elif tab == "privacy":
-            st.markdown("""
-            ## Privacy Policy
-            
-            **Effective Date: August 22, 2025**
-            **Last Updated: August 22, 2025**
-            
-            Bailey's Crime Lab ("we", "our", or "the Service") is committed to protecting your privacy. This Privacy Policy explains how we handle information when you use our application.
-            
-            ### 1. YouTube API Services Disclosure
-            **This application uses YouTube API Services.** By using this application, you acknowledge and agree that your use is also subject to Google's Privacy Policy and YouTube's Terms of Service.
-            
-            ### 2. Google Privacy Policy
-            By using our Service, you are also bound by Google's Privacy Policy, which can be found at:
-            **http://www.google.com/policies/privacy**
-            
-            Please review Google's Privacy Policy to understand how Google handles your information.
-            
-            ### 3. Information We Access Through YouTube API
-            When you use our Service, we access the following data through YouTube API Services:
-            
-            **API Data We Access:**
-            - Video titles and descriptions
-            - Video view counts and statistics
-            - Video publish dates and timestamps
-            - Channel names and identifiers
-            - Video thumbnails and preview images
-            - Video duration and metadata
-            - Public comments and likes counts
-            - Search results based on your queries
-            
-            **We DO NOT access:**
-            - Your personal YouTube account information
-            - Your YouTube watch history
-            - Your private playlists or subscriptions
-            - Any private or unlisted videos
-            
-            ### 4. How We Collect Information
-            **Direct Collection:**
-            - Search queries you enter in the application
-            - Cases or topics you choose to research
-            - Login credentials (password for app access only, not YouTube login)
-            
-            **Automatic Collection:**
-            - Session information while you use the app
-            - Temporary usage data during your session
-            
-            ### 5. How We Use Your Information
-            We use the accessed information solely to:
-            - Display YouTube search results relevant to your queries
-            - Show video statistics for research purposes
-            - Provide competitor analysis features
-            - Display trending content analysis
-            - Generate episode strategies based on search data
-            
-            **We DO NOT:**
-            - Store YouTube data permanently
-            - Create user profiles from YouTube data
-            - Share YouTube data with third parties
-            - Use data for advertising purposes
-            
-            ### 6. Data Storage and Retention
-            **Session-Only Storage:**
-            - YouTube API data is displayed in real-time and NOT stored permanently
-            - All data is session-based and cleared when you close the application
-            - Search results are temporary and exist only during your active session
-            
-            **What We Store:**
-            - API authorization tokens (only for session duration)
-            - Your app login status (session only)
-            - Temporary search queries (cleared after session)
-            
-            **What We DON'T Store:**
-            - YouTube video data
-            - User viewing history
-            - Personal information from YouTube
-            - Any cached YouTube content
-            
-            ### 7. Data Sharing
-            **We DO NOT share your information with third parties**, including:
-            - No sharing of YouTube API data
-            - No selling of user information
-            - No sharing with advertisers
-            - No sharing with data brokers
-            
-            **Limited Sharing:**
-            We may share information only when:
-            - Required by law or legal process
-            - Necessary to protect our rights or safety
-            - You explicitly consent to sharing
-            
-            ### 8. Cookies and Tracking Technologies
-            **Our Use of Cookies:**
-            - We use session cookies to maintain your login state
-            - Session cookies are temporary and deleted when you close your browser
-            - We do NOT use tracking cookies
-            - We do NOT use third-party analytics cookies
-            - We do NOT allow third-party tracking
-            
-            **Browser Storage:**
-            - We do NOT use localStorage or sessionStorage for YouTube data
-            - All data is maintained in server session memory only
-            
-            ### 9. Third-Party Services
-            This application integrates with:
-            - YouTube API Services (governed by Google's Privacy Policy)
-            - Other research APIs (Perplexity, Wikipedia, Reddit) for case research
-            
-            Each third-party service has its own privacy policy:
-            - Google/YouTube: http://www.google.com/policies/privacy
-            - Other services: Available on their respective websites
-            
-            ### 10. Children's Privacy
-            Our Service is not directed to children under 13. We do not knowingly collect information from children under 13. If you are a parent and believe your child has provided us with information, please contact us.
-            
-            ### 11. Your Rights
-            You have the right to:
-            - Stop using the Service at any time
-            - Request information about data practices
-            - Contact us with privacy concerns
-            
-            Since we don't store personal data, there is no stored data to delete or export.
-            
-            ### 12. Security
-            We implement appropriate security measures to protect against unauthorized access during your session. However, no internet transmission is 100% secure.
-            
-            ### 13. Changes to This Policy
-            We may update this Privacy Policy from time to time. The "Last Updated" date will reflect any changes. Continued use after changes constitutes acceptance.
-            
-            ### 14. Contact Information
-            For privacy-related questions or concerns:
-            
-            **Privacy Contact:**
-            Email: privacy@shorthandstudios.com
-            
-            **General Support:**
-            Email: support@shorthandstudios.com
-            
-            **Mailing Address:**
-            Shorthand Studios
-            [Your Address]
-            [City, State ZIP]
-            
-            ### 15. Compliance Statement
-            This Privacy Policy is designed to comply with:
-            - YouTube API Services Terms of Service
-            - Google Privacy Requirements
-            - Applicable data protection laws
-            
-            **API Project Number:** 71223009754
-            **Single Project Confirmation:** We use only one YouTube API project number for this application.
-            """)
-            
-        elif tab == "contact":
-            st.markdown("""
-            ## Contact Information
-            
-            **Shorthand Studios**
-            
-            Email: support@shorthandstudios.com
-            Privacy Inquiries: privacy@shorthandstudios.com
-            """)
-        
-        if st.button("Close"):
-            del st.session_state.show_legal
-            st.rerun()
-    
-    show_legal_modal()
+        show_legal_modal()
 
 # Simple text links that trigger the modal
 st.markdown("---")
@@ -6240,7 +6241,6 @@ st.markdown("""
   <div style="font-size: 18px; color: #FFFFFF;">Content Intelligence Platform</div>
   <div style="margin-top: 1rem; font-size: 12px; color: #CCCCCC;">
     By using this application, you agree to YouTube's Terms of Service and our Privacy Policy.
-    <br>For legal information, add /legal to the navigation menu.
   </div>
 </div>
 """, unsafe_allow_html=True)
