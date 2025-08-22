@@ -2058,37 +2058,33 @@ def search_youtube_videos(query, api_key=None, max_results=10, timeframe="week",
         
         st.success(f"✅ Found live YouTube results for '{query}' from {timeframe}")
         return search_results
+      
+      elif response.status_code == 403:
+        # Rate limit or quota exceeded
+        try:
+          error_data = response.json()
+          error_reason = error_data.get('error', {}).get('errors', [{}])[0].get('reason', '')
+          
+          if 'quotaExceeded' in error_reason or 'rateLimitExceeded' in error_reason:
+            st.error("🚫 YouTube API rate limit reached. The daily quota has been exceeded. Please wait until midnight Pacific Time for the quota to reset.")
+          else:
+            st.error("YouTube API access error. Please check your API key permissions.")
+        except:
+          st.error("🚫 YouTube API quota exceeded. Please wait until midnight Pacific Time for the quota to reset.")
+        
+        return []  # Return empty list, no sample data
+      
+      else:
+        st.warning(f"YouTube API error (Status: {response.status_code}). Unable to fetch videos.")
+        return []  # Return empty list, no sample data
     
-    # Fallback for API errors
-    if search_type == "channel":
-      st.warning("⚠️ Channel search failed. Showing sample results.")
-      return search_youtube_videos(query, search_type=search_type)
-    else:
-      st.warning("⚠️ Video search failed. Showing sample results.")
-      return search_youtube_videos(query, timeframe=timeframe)
+    # Remove the fallback section that shows sample data
+    # Just return empty list if we get here
+    return []
       
   except Exception as e:
-    st.warning(f"⚠️ YouTube search temporarily unavailable: {str(e)[:50]}... Using sample data.")
-    return search_youtube_videos(query, timeframe=timeframe, search_type=search_type)
-
-def extract_view_count_for_sorting(views_string):
-    """Extract numeric view count from formatted string for sorting"""
-    if not views_string or views_string == "N/A":
-        return 0
-    
-    try:
-        # Remove "views" and any commas
-        clean_views = views_string.replace(" views", "").replace(",", "")
-        
-        # Handle M and K suffixes
-        if "M" in clean_views:
-            return int(float(clean_views.replace("M", "")) * 1000000)
-        elif "K" in clean_views:
-            return int(float(clean_views.replace("K", "")) * 1000)
-        else:
-            return int(clean_views)
-    except:
-        return 0
+    st.error(f"YouTube search error: {str(e)}")
+    return []  # Return empty list, no sample data
     
 def get_video_views(video_id, api_key):
     """Get view count for a specific video"""
@@ -4636,10 +4632,22 @@ elif st.session_state.current_page == "True Crime Podcasts":
 
 elif st.session_state.current_page == "YouTube Competitors":    
     st.markdown("### YouTube Competitor Monitoring")
-    st.markdown("Data provided by YouTube API Services")  # ADD HERE
+    st.markdown("Data provided by YouTube API Services")
     st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-
     
+    # Add rate limit status indicator
+    if st.session_state.get('youtube_rate_limited', False):
+        st.error("""
+        🚫 **YouTube API Rate Limited**
+        
+        You've reached the YouTube API quota limit. The quota resets daily at midnight Pacific Time.
+        Some features may not work until the quota resets.
+        """)
+        # Reset the flag after showing
+        if st.button("Clear this message"):
+            st.session_state.youtube_rate_limited = False
+            st.rerun()
+
     # Define competitors with their channel IDs
     COMPETITORS = {
         "Danielle Kirsty": "UC7QBeubzVIOqFjUjd_gNEBQ",
@@ -5821,9 +5829,9 @@ st.markdown("""
     This application uses YouTube API Services and is subject to Google's Privacy Policy<br>
     <a href="http://www.google.com/policies/privacy" style="color: #CCCCCC;">http://www.google.com/policies/privacy</a>
   </div>
-  <div style="margin-top: 2rem; font-size: 12px; color: #999999;">
-    <strong>Contact:</strong> access@shorthandstudios.com<br>
-    <strong>Address:</strong> Underscore Venture One LLC<br>
+  <div style="margin-top: 2rem; font-size: 12px; color: #FFFFFF;">
+    <strong style="color: #FFFFFF;">Contact:</strong> access@shorthandstudios.com<br>
+    <strong style="color: #FFFFFF;">Address:</strong> Underscore Venture One LLC<br>
     8383 Wilshire Blvd, Beverly Hills, CA 90211
   </div>
 </div>
