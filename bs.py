@@ -5893,22 +5893,7 @@ elif st.session_state.current_page == "Episode Calendar":
         else:
             st.info("No data to analyze. Start scheduling episodes!")
 
-# At the bottom of your app (before or after the footer HTML)
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("Terms of Service", key="footer_tos"):
-        st.session_state.show_legal = "terms"
-
-with col2:
-    if st.button("Privacy Policy", key="footer_privacy"):
-        st.session_state.show_legal = "privacy"
-
-with col3:
-    if st.button("Contact", key="footer_contact"):
-        st.session_state.show_legal = "contact"
-
-# Display the legal modal/popup if clicked
+# Display the legal modal/popup if clicked (only if triggered from elsewhere)
 if 'show_legal' in st.session_state:
     @st.dialog("Legal Information")
     def show_legal_modal():
@@ -5927,19 +5912,76 @@ if 'show_legal' in st.session_state:
             **By using this application, you are also agreeing to be bound by the YouTube Terms of Service.**
             
             Please review the YouTube Terms of Service at: https://www.youtube.com/t/terms
-            # ... rest of your terms content
+            
+            ### 3. Use of YouTube API Services
+            This application uses YouTube API Services to provide video search and analysis features.
+            Your use of YouTube content through our Service is subject to YouTube's Terms of Service.
+            
+            ### 4. Acceptable Use
+            You agree not to use the Service to violate any applicable laws or YouTube's policies.
             """)
             
         elif tab == "privacy":
             st.markdown("""
             ## Privacy Policy
-            # ... your privacy policy content
+            
+            **Effective Date: August 22, 2025**
+            
+            ### 1. YouTube API Services
+            This application uses YouTube API Services to access and display YouTube content.
+            
+            ### 2. Google Privacy Policy
+            By using our Service, you are also subject to Google's Privacy Policy.
+            Please review it at: http://www.google.com/policies/privacy
+            
+            ### 3. Information We Access
+            Through the YouTube API, we access:
+            - Video titles, descriptions, and metadata
+            - View counts and statistics
+            - Channel information
+            - Video thumbnails
+            - Published dates
+            
+            ### 4. How We Use Your Information
+            We use YouTube API data solely to:
+            - Display search results for content research
+            - Show video statistics for analysis
+            - Provide competitor monitoring features
+            
+            ### 5. Data Storage and Retention
+            - YouTube API data is NOT stored permanently
+            - Video information is displayed only during your active session
+            - Session data is automatically cleared when you close the application
+            - We store API authorization tokens only for the duration of your session
+            - No YouTube data is cached or stored in any database
+            
+            ### 6. Data Sharing
+            We DO NOT share YouTube API data with third parties.
+            All data remains within the application for your use only.
+            
+            ### 7. Cookies and Tracking
+            This application may use session cookies to maintain your login state.
+            We do not use tracking cookies or allow third-party tracking.
+            
+            ### 8. Contact Information
+            For questions about this Privacy Policy or our data practices:
+            Email: privacy@shorthandstudios.com
             """)
             
         elif tab == "contact":
             st.markdown("""
             ## Contact Information
-            # ... your contact content
+            
+            **Shorthand Studios**
+            
+            Email: support@shorthandstudios.com
+            Privacy Inquiries: privacy@shorthandstudios.com
+            
+            Project Number: 71223009754
+            
+            ### API Compliance
+            This application uses a single YouTube API project number: 71223009754
+            We do not use multiple project numbers for this API Client.
             """)
         
         if st.button("Close"):
@@ -5948,10 +5990,14 @@ if 'show_legal' in st.session_state:
     
     show_legal_modal()
 
-# Your existing footer HTML (now just for styling)
+# Footer HTML with text notice about legal compliance
 st.markdown("""
 <div class="footer">
   <div class="brand">SHORTHAND STUDIOS</div>
   <div style="font-size: 18px; color: #FFFFFF;">Content Intelligence Platform</div>
+  <div style="margin-top: 1rem; font-size: 12px; color: #CCCCCC;">
+    By using this application, you agree to YouTube's Terms of Service and our Privacy Policy.
+    <br>For legal information, add /legal to the navigation menu.
+  </div>
 </div>
 """, unsafe_allow_html=True)
