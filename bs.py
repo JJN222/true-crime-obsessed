@@ -415,9 +415,9 @@ if main_section == "Research":
     
     selected_page = st.sidebar.radio(
         "",  # Empty label since we're using custom markdown
-        ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows"],
+        ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Legal"],
         key="research_nav",
-        index=["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows"].index(st.session_state.current_page) if st.session_state.current_page in ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows"] else 0,
+        index=["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Legal"].index(st.session_state.current_page) if st.session_state.current_page in ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Legal"] else 0,
         label_visibility="collapsed"  # Hide the empty label
     )
     st.session_state.current_page = selected_page
@@ -431,9 +431,9 @@ else:  # PRODUCTION
     
     selected_page = st.sidebar.radio(
         "",  # Empty label since we're using custom markdown
-        ["Saved Ideas", "Script Builder", "Episode Calendar"],
+        ["Saved Ideas", "Script Builder", "Episode Calendar", "Legal"],
         key="production_nav",
-        index=["Saved Ideas", "Script Builder", "Episode Calendar"].index(st.session_state.current_page) if st.session_state.current_page in ["Saved Ideas", "Script Builder", "Episode Calendar"] else 0,
+        index=["Saved Ideas", "Script Builder", "Episode Calendar", "Legal"].index(st.session_state.current_page) if st.session_state.current_page in ["Saved Ideas", "Script Builder", "Episode Calendar", "Legal"] else 0,
         label_visibility="collapsed"  # Hide the empty label
     )
     st.session_state.current_page = selected_page
@@ -3738,7 +3738,10 @@ if st.session_state.current_page == "Case Search":
 
         with source_tabs[1]:  # YouTube tab
             if youtube_count and youtube_count > 0:
+                st.markdown("Data provided by YouTube API Services")  # ADD HERE
                 st.write(f"Found {youtube_count:,} videos about this case")
+                st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
+
                 
                 # Get actual YouTube videos if we have the API key
                 if youtube_api_key:
@@ -3821,6 +3824,7 @@ if st.session_state.current_page == "Case Search":
                                     
                                     with col1:
                                         st.markdown("#### Top 5 Regular Videos")
+                                        st.markdown("Data provided by YouTube API Services")
                                         if regular_videos:
                                             for video in regular_videos[:5]:
                                                 with st.container():
@@ -3867,6 +3871,7 @@ if st.session_state.current_page == "Case Search":
 
                                     with col2:
                                         st.markdown("#### Top 5 Shorts")
+                                        st.markdown("Data provided by YouTube API Services")
                                         if shorts:
                                             for short in shorts[:5]:
                                                 with st.container():
@@ -4509,6 +4514,9 @@ elif st.session_state.current_page == "True Crime Podcasts":
 
 elif st.session_state.current_page == "YouTube Competitors":    
     st.markdown("### YouTube Competitor Monitoring")
+    st.markdown("Data provided by YouTube API Services")  # ADD HERE
+    st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
+
     
     # Define competitors with their channel IDs
     COMPETITORS = {
@@ -4667,7 +4675,9 @@ elif st.session_state.current_page == "YouTube Competitors":
                         all_videos.sort(key=lambda x: x['views'], reverse=True)
                         
                         st.success(f"Found {len(all_videos)} videos from {len(selected_competitors)} channels (sorted by views)")
-                        st.session_state.competitor_videos = all_videos
+                        st.markdown("Data provided by YouTube API Services")  # ADD HERE
+                        st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
+
                         
                         # Display results
                         for i, video in enumerate(all_videos, 1):
@@ -4714,11 +4724,10 @@ elif st.session_state.current_page == "YouTube Competitors":
                                         else:
                                             likes_str = str(video['likes'])
                                         st.metric("Likes", likes_str)
-                                    
+
                                     with col_c:
-                                        engagement = (video['likes'] / video['views'] * 100) if video['views'] > 0 else 0
-                                        st.metric("Engagement", f"{engagement:.1f}%")
-                                    
+                                        st.metric("Comments", video['comments'])
+
                                     # Duration
                                     if is_short:
                                         st.caption(f"Duration: {video['duration_seconds']} seconds (Short)")
@@ -4856,6 +4865,9 @@ elif st.session_state.current_page == "YouTube Competitors":
                         search_results.sort(key=lambda x: x['views'], reverse=True)
                         
                         st.success(f"Found {len(search_results)} videos about '{search_query}'")
+                        st.markdown("Data provided by YouTube API Services")  # ADD HERE
+                        st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
+
                         
                         # Display search results
                         for i, video in enumerate(search_results, 1):
@@ -4900,17 +4912,10 @@ elif st.session_state.current_page == "YouTube Competitors":
                                     col_a, col_b, col_c = st.columns(3)
                                     with col_a:
                                         st.metric("Views", views_display)
-                                    
                                     with col_b:
-                                        if video['likes'] >= 1000:
-                                            likes_str = f"{video['likes']/1000:.0f}K"
-                                        else:
-                                            likes_str = str(video['likes'])
                                         st.metric("Likes", likes_str)
-                                    
                                     with col_c:
-                                        engagement = (video['likes'] / video['views'] * 100) if video['views'] > 0 else 0
-                                        st.metric("Engagement", f"{engagement:.1f}%")
+                                        st.metric("Comments", str(video['comments']))
                                     
                                     # Show relevant part of description
                                     if video['description']:
@@ -5192,6 +5197,91 @@ elif st.session_state.current_page == "Movies & TV Shows":
                     tmdb_url = f"https://www.themoviedb.org/{media_type_for_url}/{item.get('id')}"
                     st.markdown(f"[View on TMDB]({tmdb_url})")
             
+# Add this new page to your sidebar navigation
+elif st.session_state.current_page == "Legal":
+    st.markdown("### Terms of Service & Privacy Policy")
+    
+    tabs = st.tabs(["Terms of Service", "Privacy Policy", "Contact"])
+    
+    with tabs[0]:
+        st.markdown("""
+        ## Shorthand Studios - Terms of Service
+        
+        **Effective Date: August 22, 2025**
+        
+        ### 1. Acceptance of Terms
+        By using Shorthand Studios ("the Service"), you agree to be bound by these Terms of Service.
+        
+        ### 2. YouTube Terms of Service
+        **By using this application, you are also agreeing to be bound by the YouTube Terms of Service.**
+        
+        Please review the YouTube Terms of Service at: https://www.youtube.com/t/terms
+        
+        ### 3. Use of YouTube API Services
+        This application uses YouTube API Services to provide video search and analysis features.
+        Your use of YouTube content through our Service is subject to YouTube's Terms of Service.
+        
+        ### 4. Acceptable Use
+        You agree not to use the Service to violate any applicable laws or YouTube's policies.
+        """)
+    
+    with tabs[1]:
+        st.markdown("""
+        ## Privacy Policy
+        
+        **Effective Date: August 22, 2025**
+        
+        ### 1. YouTube API Services
+        This application uses YouTube API Services to access and display YouTube content.
+        
+        ### 2. Google Privacy Policy
+        By using our Service, you are also subject to Google's Privacy Policy.
+        Please review it at: http://www.google.com/policies/privacy
+        
+        ### 3. Information We Access
+        Through the YouTube API, we access:
+        - Video titles, descriptions, and metadata
+        - View counts and statistics
+        - Channel information
+        - Video thumbnails
+        - Published dates
+        
+        ### 4. How We Use Your Information
+        We use YouTube API data solely to:
+        - Display search results for content research
+        - Show video statistics for analysis
+        - Provide competitor monitoring features
+        
+        ### 5. Data Storage
+        - We DO NOT permanently store YouTube data
+        - Video information is only displayed during your session
+        - We store API authorization tokens only as necessary for active sessions
+        
+        ### 6. Data Sharing
+        We DO NOT share YouTube API data with third parties.
+        All data remains within the application for your use only.
+        
+        ### 7. Cookies and Tracking
+        This application may use session cookies to maintain your login state.
+        We do not use tracking cookies or allow third-party tracking.
+        
+        ### 8. Contact Information
+        For questions about this Privacy Policy or our data practices:
+        Email: privacy@shorthandstudios.com
+        """)
+    
+    with tabs[2]:
+        st.markdown("""
+        ## Contact Information
+        
+        **Shorthand Studios**
+        
+        Email: support@shorthandstudios.com
+        Privacy Inquiries: privacy@shorthandstudios.com
+        
+        Project Number: 71223009754
+        """)
+
 elif st.session_state.current_page == "Saved Ideas":
     st.markdown("""
     <h3 style="font-family: 'Crimson Text', serif; font-weight: 700;">SAVED IDEAS</h3>
@@ -5681,9 +5771,15 @@ elif st.session_state.current_page == "Episode Calendar":
         else:
             st.info("No data to analyze. Start scheduling episodes!")
 
+# Update your footer to include legal links:
 st.markdown("""
 <div class="footer">
   <div class="brand">SHORTHAND STUDIOS</div>
   <div style="font-size: 18px; color: #FFFFFF;">Content Intelligence Platform</div>
+  <div style="margin-top: 1rem; font-size: 14px;">
+    <a href="#legal" style="color: #FFFFFF; margin-right: 1rem;">Terms of Service</a>
+    <a href="#legal" style="color: #FFFFFF; margin-right: 1rem;">Privacy Policy</a>
+    <a href="#legal" style="color: #FFFFFF;">Contact</a>
+  </div>
 </div>
 """, unsafe_allow_html=True)
