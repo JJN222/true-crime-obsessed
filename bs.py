@@ -387,6 +387,100 @@ api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, ge
 # Hardcode Bailey Sarian as the creator
 creator_name = "Bailey Sarian"
 
+# Get API keys from environment variables
+api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key = get_api_keys()
+
+# Hardcode Bailey Sarian as the creator
+creator_name = "Bailey Sarian"
+
+# ============ ADD LOGIN PAGE HERE ============
+
+# Add this after your API keys initialization
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+# Login page
+if not st.session_state.authenticated:
+    # Custom CSS for the login page
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+    
+    .login-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        text-align: center;
+    }
+    
+    .cursive-text {
+        font-family: 'Dancing Script', cursive;
+        font-size: 32px;
+        font-weight: 700;
+        color: #666666;
+        margin-bottom: 0;
+    }
+    
+    .crime-lab-text {
+        font-family: 'Crimson Text', serif;
+        font-size: 60px;
+        font-weight: 700;
+        color: #DC143C;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-top: -10px;
+        margin-bottom: 40px;
+    }
+    
+    .stTextInput > div > div > input {
+        text-align: center;
+        font-size: 18px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Create centered login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+        <div class="login-container">
+            <p class="cursive-text">You are about to enter</p>
+            <h1 class="crime-lab-text">BAILEY'S CRIME LAB</h1>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Password input
+        password = st.text_input(
+            "Enter Password", 
+            type="password", 
+            placeholder="Enter password to continue...",
+            key="login_password",
+            label_visibility="collapsed"
+        )
+        
+        # Center the button
+        col_a, col_b, col_c = st.columns([1, 1, 1])
+        with col_b:
+            if st.button("ENTER", type="primary", use_container_width=True):
+                if password == "baileysarian":
+                    st.session_state.authenticated = True
+                    st.success("Access granted! Welcome to Bailey's Crime Lab")
+                    st.rerun()
+                else:
+                    st.error("Incorrect password. Please try again.")
+        
+        # Add a subtle hint or footer
+        st.markdown("""
+        <div style="text-align: center; margin-top: 50px; color: #999;">
+            <small>Authorized personnel only</small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.stop()  
+
 # ============ SIDEBAR NAVIGATION ============
 
 # Main navigation selection
@@ -407,11 +501,13 @@ st.sidebar.markdown("---")
 
 # Sub-navigation based on main selection
 if main_section == "Research":
-    st.sidebar.markdown("""
-    <p style="font-family: 'Crimson Text', serif; font-size: 30px; font-weight: 600; color: #FFFFFF; margin-bottom: 0.5rem;">
-    TOOLS
-    </p>
-    """, unsafe_allow_html=True)
+    selected_page = st.sidebar.radio(
+        "",
+        ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows"],  # Removed "Legal"
+        key="research_nav",
+        index=["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows"].index(st.session_state.current_page) if st.session_state.current_page in ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows"] else 0,
+        label_visibility="collapsed"
+    )
     
     selected_page = st.sidebar.radio(
         "",  # Empty label since we're using custom markdown
@@ -5771,15 +5867,65 @@ elif st.session_state.current_page == "Episode Calendar":
         else:
             st.info("No data to analyze. Start scheduling episodes!")
 
-# Update your footer to include legal links:
+# At the bottom of your app (before or after the footer HTML)
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("Terms of Service", key="footer_tos"):
+        st.session_state.show_legal = "terms"
+
+with col2:
+    if st.button("Privacy Policy", key="footer_privacy"):
+        st.session_state.show_legal = "privacy"
+
+with col3:
+    if st.button("Contact", key="footer_contact"):
+        st.session_state.show_legal = "contact"
+
+# Display the legal modal/popup if clicked
+if 'show_legal' in st.session_state:
+    @st.dialog("Legal Information")
+    def show_legal_modal():
+        tab = st.session_state.show_legal
+        
+        if tab == "terms":
+            st.markdown("""
+            ## Terms of Service
+            
+            **Effective Date: August 22, 2025**
+            
+            ### 1. Acceptance of Terms
+            By using Shorthand Studios ("the Service"), you agree to be bound by these Terms of Service.
+            
+            ### 2. YouTube Terms of Service
+            **By using this application, you are also agreeing to be bound by the YouTube Terms of Service.**
+            
+            Please review the YouTube Terms of Service at: https://www.youtube.com/t/terms
+            # ... rest of your terms content
+            """)
+            
+        elif tab == "privacy":
+            st.markdown("""
+            ## Privacy Policy
+            # ... your privacy policy content
+            """)
+            
+        elif tab == "contact":
+            st.markdown("""
+            ## Contact Information
+            # ... your contact content
+            """)
+        
+        if st.button("Close"):
+            del st.session_state.show_legal
+            st.rerun()
+    
+    show_legal_modal()
+
+# Your existing footer HTML (now just for styling)
 st.markdown("""
 <div class="footer">
   <div class="brand">SHORTHAND STUDIOS</div>
   <div style="font-size: 18px; color: #FFFFFF;">Content Intelligence Platform</div>
-  <div style="margin-top: 1rem; font-size: 14px;">
-    <a href="#legal" style="color: #FFFFFF; margin-right: 1rem;">Terms of Service</a>
-    <a href="#legal" style="color: #FFFFFF; margin-right: 1rem;">Privacy Policy</a>
-    <a href="#legal" style="color: #FFFFFF;">Contact</a>
-  </div>
 </div>
 """, unsafe_allow_html=True)
