@@ -2428,15 +2428,11 @@ def get_youtube_podcast_channels(api_key=None, category="general", max_results=2
 
     
 def search_courtlistener_cases(query, api_token, limit=10):
-    """
-    Search CourtListener for criminal cases and court documents
-    Note: You'll need to get your API token from CourtListener
-    """
-    
-    # First, search for dockets (cases) that match the query
-    headers = {
-        'Authorization': f'Token {api_token}'
-    }
+    """Enhanced CourtListener search with AI-powered query expansion"""
+    if not api_token:
+        return None
+        
+    headers = {'Authorization': f'Token {api_token}'}
     
     results = {
         'dockets': [],
@@ -2444,84 +2440,197 @@ def search_courtlistener_cases(query, api_token, limit=10):
         'total_found': 0
     }
     
-    try:
-        # Search the main dockets endpoint
-        # Focus on criminal cases for true crime content
-        dockets_url = "https://www.courtlistener.com/api/rest/v4/dockets/"
-        
-        params = {
-            'q': query,
-            'type': 'r',  # RECAP dockets
-            'order_by': '-date_filed',
-            'page_size': limit
-        }
-        
-        response = requests.get(dockets_url, headers=headers, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
+    # Use AI to generate multiple search variations
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    
+    if api_key:
+        try:
+            import openai
+            openai.api_key = api_key
             
-            for docket in data.get('results', []):
-                # Filter for criminal cases or cases with relevant nature of suit
-                nature_of_suit = docket.get('nature_of_suit', '').lower()
-                case_name = docket.get('case_name', '').lower()
-                
-                # Check if it's likely a criminal case
-                is_criminal = any(term in nature_of_suit or term in case_name 
-                                 for term in ['criminal', 'murder', 'homicide', 'assault', 
-                                           'death', 'wrongful', 'manslaughter'])
-                
-                if is_criminal or not nature_of_suit:  # Include if criminal or unknown
-                    results['dockets'].append({
-                        'id': docket.get('id'),
-                        'case_name': docket.get('case_name', 'Unknown Case'),
-                        'case_name_short': docket.get('case_name_short', ''),
-                        'court': docket.get('court_id', ''),
-                        'docket_number': docket.get('docket_number', ''),
-                        'date_filed': docket.get('date_filed', ''),
-                        'date_terminated': docket.get('date_terminated', ''),
-                        'nature_of_suit': docket.get('nature_of_suit', ''),
-                        'cause': docket.get('cause', ''),
-                        'jury_demand': docket.get('jury_demand', ''),
-                        'assigned_to': docket.get('assigned_to_str', ''),
-                        'url': f"https://www.courtlistener.com{docket.get('absolute_url', '')}",
-                        'pacer_case_id': docket.get('pacer_case_id', ''),
-                        'filepath_ia': docket.get('filepath_ia', ''),  # Internet Archive link
-                        'filepath_ia_json': docket.get('filepath_ia_json', '')
-                    })
+            prompt = f"""Given the search term "{query}" for a true crime case, generate search variations for legal databases.
+
+Return ONLY a Python list of search terms that would find this case in court records.
+Include variations like:
+- "United States v. [lastname]"
+- "State v. [lastname]" 
+- "People v. [lastname]"
+- "[lastname]" alone
+- "[victim_lastname] murder"
+- Any known legal case names
+
+For example, if searching "Ted Bundy":
+["United States v. Bundy", "State v. Bundy", "Bundy", "Theodore Robert Bundy", "State of Florida v. Theodore Robert Bundy"]
+
+If searching for a victim like "JonBenet Ramsey":
+["Ramsey", "People v. Ramsey", "JonBenet", "Boulder Colorado Ramsey", "Ramsey homicide"]
+
+Query: {query}
+Return ONLY the Python list:"""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=200,
+                temperature=0.3,
+                timeout=5
+            )
             
-            results['total_found'] = data.get('count', 0)
+            # Parse the response
+            import ast
+            search_variations = ast.literal_eval(response.choices[0].message.content.strip())
             
-        # Also search for opinions (written decisions)
-        opinions_url = "https://www.courtlistener.com/api/rest/v4/search/"
+        except:
+            # Fallback to basic variations
+            search_variations = [query]
+    else:
+        # No AI available - create basic variations
+        words = query.split()
+        last_name = words[-1] if words else query
         
-        params = {
-            'q': query,
-            'type': 'o',  # opinions
-            'order_by': 'score desc',
-            'stat_Precedential': 'on',
-            'page_size': 5  # Get fewer opinions
-        }
-        
-        response = requests.get(opinions_url, headers=headers, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            for item in data.get('results', []):
-                results['opinions'].append({
-                    'case_name': item.get('caseName', ''),
-                    'court': item.get('court', ''),
-                    'date_filed': item.get('dateFiled', ''),
-                    'citation': item.get('citation', []),
-                    'summary': item.get('snippet', ''),
-                    'url': f"https://www.courtlistener.com{item.get('absolute_url', '')}",
-                    'status': item.get('status', ''),
-                    'judge': item.get('judge', '')
-                })
+        search_variations = [
+            query,  # Original
+            f"United States v. {last_name}",
+            f"State v. {last_name}",
+            f"People v. {last_name}",
+            last_name,  # Just last name
+            f"{last_name} murder",
+            f"{last_name} homicide"
+        ]
+    
+    # Search with each variation
+    all_dockets = []
+    all_opinions = []
+    seen_ids = set()
+    
+    for search_term in search_variations[:5]:  # Limit to 5 searches
+        try:
+            # Search dockets
+            dockets_url = "https://www.courtlistener.com/api/rest/v4/dockets/"
+            params = {
+                'q': search_term,
+                'type': 'r',
+                'order_by': '-date_filed',
+                'page_size': 5  # Fewer per search since we're doing multiple
+            }
+            
+            response = requests.get(dockets_url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
                 
-    except Exception as e:
-        print(f"CourtListener API error: {e}")
-        return None
+                for docket in data.get('results', []):
+                    docket_id = docket.get('id')
+                    
+                    # Avoid duplicates
+                    if docket_id not in seen_ids:
+                        seen_ids.add(docket_id)
+                        
+                        # Check if it's likely criminal/relevant
+                        case_name = docket.get('case_name', '').lower()
+                        nature_of_suit = docket.get('nature_of_suit', '').lower()
+                        cause = docket.get('cause', '').lower()
+                        
+                        # Score relevance
+                        relevance_score = 0
+                        
+                        # Check for criminal indicators
+                        criminal_terms = ['criminal', 'murder', 'homicide', 'death', 'killing', 
+                                        'manslaughter', 'assault', 'united states v.', 'state v.', 
+                                        'people v.', 'commonwealth v.']
+                        
+                        for term in criminal_terms:
+                            if term in case_name or term in nature_of_suit or term in cause:
+                                relevance_score += 1
+                        
+                        # Check if query terms appear in case
+                        query_words = query.lower().split()
+                        for word in query_words:
+                            if len(word) > 3 and word in case_name:
+                                relevance_score += 2
+                        
+                        # Include if relevant
+                        if relevance_score > 0 or not nature_of_suit:
+                            docket_data = {
+                                'id': docket_id,
+                                'case_name': docket.get('case_name', 'Unknown Case'),
+                                'case_name_short': docket.get('case_name_short', ''),
+                                'court': docket.get('court_id', ''),
+                                'docket_number': docket.get('docket_number', ''),
+                                'date_filed': docket.get('date_filed', ''),
+                                'date_terminated': docket.get('date_terminated', ''),
+                                'nature_of_suit': docket.get('nature_of_suit', ''),
+                                'cause': docket.get('cause', ''),
+                                'jury_demand': docket.get('jury_demand', ''),
+                                'assigned_to': docket.get('assigned_to_str', ''),
+                                'url': f"https://www.courtlistener.com{docket.get('absolute_url', '')}",
+                                'pacer_case_id': docket.get('pacer_case_id', ''),
+                                'filepath_ia': docket.get('filepath_ia', ''),
+                                'filepath_ia_json': docket.get('filepath_ia_json', ''),
+                                'relevance_score': relevance_score,
+                                'matched_search': search_term  # Track which search found it
+                            }
+                            all_dockets.append(docket_data)
+            
+            # Search opinions with each variation
+            opinions_url = "https://www.courtlistener.com/api/rest/v4/search/"
+            params = {
+                'q': search_term,
+                'type': 'o',
+                'order_by': 'score desc',
+                'page_size': 3
+            }
+            
+            response = requests.get(opinions_url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                for item in data.get('results', []):
+                    # Check relevance
+                    case_name = item.get('caseName', '').lower()
+                    snippet = item.get('snippet', '').lower()
+                    
+                    is_relevant = any(term in case_name or term in snippet 
+                                     for term in ['criminal', 'murder', 'death', 'homicide'])
+                    
+                    if is_relevant or any(word in case_name for word in query.lower().split()):
+                        all_opinions.append({
+                            'case_name': item.get('caseName', ''),
+                            'court': item.get('court', ''),
+                            'date_filed': item.get('dateFiled', ''),
+                            'citation': item.get('citation', []),
+                            'summary': item.get('snippet', ''),
+                            'url': f"https://www.courtlistener.com{item.get('absolute_url', '')}",
+                            'judge': item.get('judge', ''),
+                            'matched_search': search_term
+                        })
+            
+            time.sleep(0.2)  # Rate limiting between searches
+            
+        except Exception as e:
+            continue
+    
+    # Sort by relevance score
+    all_dockets.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+    
+    results['dockets'] = all_dockets[:limit]
+    results['opinions'] = all_opinions[:5]
+    results['total_found'] = len(all_dockets)
+    
+    # If still no results, add search suggestions
+    if not all_dockets and not all_opinions:
+        results['search_suggestions'] = search_variations
+        results['no_results_message'] = f"""
+No court cases found for "{query}". 
+
+Try these searches directly on CourtListener:
+{chr(10).join(['• ' + s for s in search_variations[:3]])}
+
+Note: Court records typically use formal legal names like:
+- "United States v. [Defendant Last Name]" for federal criminal cases
+- "State v. [Defendant]" or "People v. [Defendant]" for state cases
+- Victim names rarely appear in case titles
+"""
     
     return results
 
@@ -4355,7 +4464,16 @@ if st.session_state.current_page == "Case Search":
                 # Search CourtListener with API
                 with st.spinner("Searching court databases..."):
                     court_results = search_courtlistener_cases(case_search, courtlistener_token)
-                
+                if court_results and court_results.get('no_results_message'):
+                    st.warning(court_results['no_results_message'])
+                    
+                    # Provide direct search buttons
+                    if court_results.get('search_suggestions'):
+                        st.markdown("### Click to search CourtListener directly:")
+                        for suggestion in court_results['search_suggestions'][:3]:
+                            url = f"https://www.courtlistener.com/?q={suggestion.replace(' ', '+')}&type=r"
+                            st.markdown(f"[Search for: {suggestion}]({url})")
+
                 if court_results:
                     # Create sub-tabs for different types of court documents
                     court_tabs = st.tabs(["Cases Found", "Court Opinions", "Case Details"])
@@ -4370,6 +4488,8 @@ if st.session_state.current_page == "Case Search":
                                     
                                     with col1:
                                         st.markdown(f"**Case:** {docket['case_name']}")
+                                        if docket.get('matched_search'):
+                                            st.caption(f"Found via: {docket['matched_search']}")
                                         st.markdown(f"**Court:** {docket['court'].upper()}")
                                         st.markdown(f"**Docket #:** {docket['docket_number']}")
                                         
