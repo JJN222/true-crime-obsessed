@@ -378,17 +378,18 @@ def get_api_keys():
     gemini_api_key = os.getenv("GEMINI_API_KEY", "")
     serper_api_key = os.getenv("SERPER_API_KEY", "")
     perplexity_api_key = os.getenv("PERPLEXITY_API_KEY", "")
+    courtlistener_token = os.getenv("COURTLISTENER_API_TOKEN", "")  
 
-    return openai_key, youtube_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key
+    return openai_key, youtube_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key, courtlistener_token  # ADD courtlistener_token
 
 # Get API keys from environment variables
-api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key = get_api_keys()
+api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key, courtlistener_token = get_api_keys()
 
 # Hardcode Bailey Sarian as the creator
 creator_name = "Bailey Sarian"
 
 # Get API keys from environment variables
-api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key = get_api_keys()
+api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key, courtlistener_token = get_api_keys()
 
 # Hardcode Bailey Sarian as the creator
 creator_name = "Bailey Sarian"
@@ -2428,7 +2429,7 @@ def get_youtube_podcast_channels(api_key=None, category="general", max_results=2
 
     
 def search_courtlistener_cases(query, api_token, limit=10):
-    """Enhanced CourtListener search with AI-powered query expansion"""
+    """Search CourtListener for criminal cases - handles middle names/initials"""
     if not api_token:
         return None
         
@@ -2440,78 +2441,70 @@ def search_courtlistener_cases(query, api_token, limit=10):
         'total_found': 0
     }
     
-    # Use AI to generate multiple search variations
-    api_key = os.getenv("OPENAI_API_KEY", "")
+    # Parse the name to handle middle names/initials
+    name_parts = query.strip().split()
     
-    if api_key:
-        try:
-            import openai
-            openai.api_key = api_key
-            
-            prompt = f"""Given the search term "{query}" for a true crime case, generate search variations for legal databases.
-
-Return ONLY a Python list of search terms that would find this case in court records.
-Include variations like:
-- "United States v. [lastname]"
-- "State v. [lastname]" 
-- "People v. [lastname]"
-- "[lastname]" alone
-- "[victim_lastname] murder"
-- Any known legal case names
-
-For example, if searching "Ted Bundy":
-["United States v. Bundy", "State v. Bundy", "Bundy", "Theodore Robert Bundy", "State of Florida v. Theodore Robert Bundy"]
-
-If searching for a victim like "JonBenet Ramsey":
-["Ramsey", "People v. Ramsey", "JonBenet", "Boulder Colorado Ramsey", "Ramsey homicide"]
-
-Query: {query}
-Return ONLY the Python list:"""
-
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=200,
-                temperature=0.3,
-                timeout=5
-            )
-            
-            # Parse the response
-            import ast
-            search_variations = ast.literal_eval(response.choices[0].message.content.strip())
-            
-        except:
-            # Fallback to basic variations
-            search_variations = [query]
-    else:
-        # No AI available - create basic variations
-        words = query.split()
-        last_name = words[-1] if words else query
-        
-        search_variations = [
-            query,  # Original
-            f"United States v. {last_name}",
-            f"State v. {last_name}",
-            f"People v. {last_name}",
-            last_name,  # Just last name
-            f"{last_name} murder",
-            f"{last_name} homicide"
-        ]
+    # Create search variations to handle middle names
+    search_terms = [query]  # Original search
     
-    # Search with each variation
+    # If it's a two-part name, it might be missing a middle name/initial
+    if len(name_parts) == 2:
+        first_name = name_parts[0]
+        last_name = name_parts[1]
+        # Add wildcards for potential middle names/initials
+        search_terms.extend([
+            f'"{first_name} {last_name}"',  # Exact as entered
+            f'{first_name} {last_name}',  # Without quotes
+            f'"{first_name}" AND "{last_name}"',  # Both parts must be present
+        ])
+    
     all_dockets = []
     all_opinions = []
     seen_ids = set()
     
-    for search_term in search_variations[:5]:  # Limit to 5 searches
+    for search_term in search_terms:
         try:
+            # Search opinions
+            opinions_url = "https://www.courtlistener.com/api/rest/v4/search/"
+            params = {
+                'q': search_term,
+                'type': 'o',
+                'order_by': 'score desc',
+                'page_size': 30
+            }
+            
+            response = requests.get(opinions_url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                for item in data.get('results', []):
+                    case_name = item.get('caseName', '')
+                    snippet = item.get('snippet', '')
+                    case_text = (case_name + ' ' + snippet)
+                    
+                    # Smart name matching
+                    if is_name_match(query, case_text):
+                        opinion_id = item.get('id')
+                        if opinion_id not in seen_ids:
+                            seen_ids.add(opinion_id)
+                            all_opinions.append({
+                                'case_name': case_name,
+                                'court': item.get('court', ''),
+                                'date_filed': item.get('dateFiled', ''),
+                                'docket_number': item.get('docket', {}).get('docket_number', '') if isinstance(item.get('docket'), dict) else '',
+                                'citation': item.get('citation', []),
+                                'summary': snippet,
+                                'url': f"https://www.courtlistener.com{item.get('absolute_url', '')}",
+                                'judge': item.get('judge', ''),
+                                'status': item.get('status', 'Published') if item.get('status') else 'Published'
+                            })
+            
             # Search dockets
             dockets_url = "https://www.courtlistener.com/api/rest/v4/dockets/"
             params = {
                 'q': search_term,
-                'type': 'r',
                 'order_by': '-date_filed',
-                'page_size': 5  # Fewer per search since we're doing multiple
+                'page_size': 30
             }
             
             response = requests.get(dockets_url, headers=headers, params=params, timeout=10)
@@ -2520,119 +2513,133 @@ Return ONLY the Python list:"""
                 data = response.json()
                 
                 for docket in data.get('results', []):
-                    docket_id = docket.get('id')
+                    case_name = docket.get('case_name', '')
                     
-                    # Avoid duplicates
-                    if docket_id not in seen_ids:
-                        seen_ids.add(docket_id)
+                    # Smart name matching
+                    if is_name_match(query, case_name):
+                        docket_id = docket.get('id')
                         
-                        # Check if it's likely criminal/relevant
-                        case_name = docket.get('case_name', '').lower()
-                        nature_of_suit = docket.get('nature_of_suit', '').lower()
-                        cause = docket.get('cause', '').lower()
-                        
-                        # Score relevance
-                        relevance_score = 0
-                        
-                        # Check for criminal indicators
-                        criminal_terms = ['criminal', 'murder', 'homicide', 'death', 'killing', 
-                                        'manslaughter', 'assault', 'united states v.', 'state v.', 
-                                        'people v.', 'commonwealth v.']
-                        
-                        for term in criminal_terms:
-                            if term in case_name or term in nature_of_suit or term in cause:
-                                relevance_score += 1
-                        
-                        # Check if query terms appear in case
-                        query_words = query.lower().split()
-                        for word in query_words:
-                            if len(word) > 3 and word in case_name:
-                                relevance_score += 2
-                        
-                        # Include if relevant
-                        if relevance_score > 0 or not nature_of_suit:
-                            docket_data = {
+                        if docket_id not in seen_ids:
+                            seen_ids.add(docket_id)
+                            
+                            # Check if criminal
+                            nature_of_suit = docket.get('nature_of_suit', '').lower()
+                            cause = docket.get('cause', '').lower()
+                            
+                            is_likely_criminal = any(term in case_name.lower() + nature_of_suit + cause 
+                                                    for term in ['criminal', 'murder', 'homicide', 
+                                                               'death', 'state v', 'united states v',
+                                                               'people v', 'commonwealth v'])
+                            
+                            all_dockets.append({
                                 'id': docket_id,
-                                'case_name': docket.get('case_name', 'Unknown Case'),
-                                'case_name_short': docket.get('case_name_short', ''),
+                                'case_name': case_name,
                                 'court': docket.get('court_id', ''),
                                 'docket_number': docket.get('docket_number', ''),
                                 'date_filed': docket.get('date_filed', ''),
                                 'date_terminated': docket.get('date_terminated', ''),
                                 'nature_of_suit': docket.get('nature_of_suit', ''),
                                 'cause': docket.get('cause', ''),
-                                'jury_demand': docket.get('jury_demand', ''),
                                 'assigned_to': docket.get('assigned_to_str', ''),
                                 'url': f"https://www.courtlistener.com{docket.get('absolute_url', '')}",
                                 'pacer_case_id': docket.get('pacer_case_id', ''),
-                                'filepath_ia': docket.get('filepath_ia', ''),
-                                'filepath_ia_json': docket.get('filepath_ia_json', ''),
-                                'relevance_score': relevance_score,
-                                'matched_search': search_term  # Track which search found it
-                            }
-                            all_dockets.append(docket_data)
+                                'is_likely_criminal': is_likely_criminal
+                            })
             
-            # Search opinions with each variation
-            opinions_url = "https://www.courtlistener.com/api/rest/v4/search/"
-            params = {
-                'q': search_term,
-                'type': 'o',
-                'order_by': 'score desc',
-                'page_size': 3
-            }
-            
-            response = requests.get(opinions_url, headers=headers, params=params, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                for item in data.get('results', []):
-                    # Check relevance
-                    case_name = item.get('caseName', '').lower()
-                    snippet = item.get('snippet', '').lower()
-                    
-                    is_relevant = any(term in case_name or term in snippet 
-                                     for term in ['criminal', 'murder', 'death', 'homicide'])
-                    
-                    if is_relevant or any(word in case_name for word in query.lower().split()):
-                        all_opinions.append({
-                            'case_name': item.get('caseName', ''),
-                            'court': item.get('court', ''),
-                            'date_filed': item.get('dateFiled', ''),
-                            'citation': item.get('citation', []),
-                            'summary': item.get('snippet', ''),
-                            'url': f"https://www.courtlistener.com{item.get('absolute_url', '')}",
-                            'judge': item.get('judge', ''),
-                            'matched_search': search_term
-                        })
-            
-            time.sleep(0.2)  # Rate limiting between searches
-            
+            if all_opinions or all_dockets:
+                break
+                
         except Exception as e:
+            print(f"Search error: {e}")
             continue
     
-    # Sort by relevance score
-    all_dockets.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+    # Sort criminal cases first
+    all_dockets.sort(key=lambda x: (x.get('is_likely_criminal', False), x.get('date_filed', '')), reverse=True)
     
-    results['dockets'] = all_dockets[:limit]
-    results['opinions'] = all_opinions[:5]
-    results['total_found'] = len(all_dockets)
+    results['opinions'] = all_opinions
+    results['dockets'] = all_dockets
+    results['total_found'] = len(all_opinions) + len(all_dockets)
     
-    # If still no results, add search suggestions
-    if not all_dockets and not all_opinions:
-        results['search_suggestions'] = search_variations
+    if not all_opinions and not all_dockets:
+        name_parts = query.split()
+        suggestions = []
+        if len(name_parts) >= 2:
+            suggestions = [
+                f'Just last name: "{name_parts[-1]}"',
+                f'With wildcard: {name_parts[0]}* {name_parts[-1]}',
+                f'State v. {name_parts[-1]}',
+            ]
+        
         results['no_results_message'] = f"""
-No court cases found for "{query}". 
+No cases found for "{query}".
 
-Try these searches directly on CourtListener:
-{chr(10).join(['• ' + s for s in search_variations[:3]])}
+The case might include a middle name or initial. Try:
+{chr(10).join(['• ' + s for s in suggestions]) if suggestions else '• Searching just the last name'}
 
-Note: Court records typically use formal legal names like:
-- "United States v. [Defendant Last Name]" for federal criminal cases
-- "State v. [Defendant]" or "People v. [Defendant]" for state cases
-- Victim names rarely appear in case titles
+**Search directly on CourtListener:**
+[Click here to search](https://www.courtlistener.com/?q={query.replace(' ', '+')}&type=o)
 """
     
     return results
+
+def is_name_match(search_query, case_text):
+    """
+    Smart matching that handles middle names and initials
+    Returns True if the search query matches the case text
+    """
+    search_query = search_query.lower().strip()
+    case_text = case_text.lower()
+    
+    # Split search query into parts
+    search_parts = search_query.split()
+    
+    if len(search_parts) == 2:
+        first_name, last_name = search_parts
+        
+        # Pattern 1: Exact match (Bryan Kohberger in Bryan Kohberger)
+        if search_query in case_text:
+            return True
+        
+        # Pattern 2: With middle initial (Bryan Kohberger matches Bryan C. Kohberger)
+        import re
+        # Look for: first_name [middle_initial]. last_name
+        pattern_with_initial = f"{first_name}\\s+\\w\\.?\\s+{last_name}"
+        if re.search(pattern_with_initial, case_text):
+            return True
+        
+        # Pattern 3: With middle name (Bryan Kohberger matches Bryan Christopher Kohberger)
+        # Look for: first_name [middle_name] last_name
+        pattern_with_middle = f"{first_name}\\s+\\w+\\s+{last_name}"
+        if re.search(pattern_with_middle, case_text):
+            return True
+        
+        # Pattern 4: Both first and last name present, but not necessarily adjacent
+        # (for cases like "Kohberger, Bryan C.")
+        if first_name in case_text and last_name in case_text:
+            # Make sure they're close enough (within 50 characters)
+            first_pos = case_text.find(first_name)
+            last_pos = case_text.find(last_name)
+            if abs(first_pos - last_pos) < 50:
+                return True
+    
+    elif len(search_parts) == 3:
+        # User provided middle name/initial - require exact match
+        if search_query in case_text:
+            return True
+        
+        # Also try without middle (in case court record doesn't have it)
+        first_name = search_parts[0]
+        last_name = search_parts[-1]
+        simple_name = f"{first_name} {last_name}"
+        if simple_name in case_text:
+            return True
+    
+    else:
+        # Single name or more than 3 parts - require exact match
+        if search_query in case_text:
+            return True
+    
+    return False
 
 def get_docket_entries(docket_id, api_token, limit=20):
     """
@@ -3862,7 +3869,7 @@ def format_youtube_date(date_string):
 
 
 # Get the API keys
-api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key = get_api_keys()
+api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key, courtlistener_token = get_api_keys()
 
 # Initialize page state
 if 'current_page' not in st.session_state:
@@ -4409,7 +4416,7 @@ if st.session_state.current_page == "Case Search":
         with source_tabs[4]:  # Court Documents tab
             st.markdown("### Legal Documents & Court Records")
             
-            # Add CourtListener API key to your environment variables
+            # Get CourtListener API token
             courtlistener_token = os.getenv("COURTLISTENER_API_TOKEN", "")
             
             if not courtlistener_token:
@@ -4417,7 +4424,7 @@ if st.session_state.current_page == "Case Search":
                 **Court documents are available with CourtListener API access.**
                 
                 To enable court document search:
-                1. Sign up at courtlistener.com (you mentioned username: JJN222)
+                1. Sign up at courtlistener.com (username: JJN222)
                 2. Get your API token from your account settings
                 3. Add it to your environment variables as COURTLISTENER_API_TOKEN
                 
@@ -4431,7 +4438,7 @@ if st.session_state.current_page == "Case Search":
                 # Provide alternative free resources
                 st.markdown("### Alternative Court Resources")
                 
-                # Direct search links
+                case_search = st.session_state.search_query
                 search_links = [
                     {
                         'name': 'CourtListener Public Search',
@@ -4447,11 +4454,6 @@ if st.session_state.current_page == "Case Search":
                         'name': 'Justia Cases',
                         'url': f'https://law.justia.com/search/?q={case_search.replace(" ", "+")}',
                         'description': 'Free case law and legal information'
-                    },
-                    {
-                        'name': 'FindLaw Cases',
-                        'url': f'https://caselaw.findlaw.com/search.html?q={case_search.replace(" ", "+")}',
-                        'description': 'Court cases and legal resources'
                     }
                 ]
                 
@@ -4464,32 +4466,62 @@ if st.session_state.current_page == "Case Search":
                 # Search CourtListener with API
                 with st.spinner("Searching court databases..."):
                     court_results = search_courtlistener_cases(case_search, courtlistener_token)
+                
                 if court_results and court_results.get('no_results_message'):
                     st.warning(court_results['no_results_message'])
-                    
-                    # Provide direct search buttons
-                    if court_results.get('search_suggestions'):
-                        st.markdown("### Click to search CourtListener directly:")
-                        for suggestion in court_results['search_suggestions'][:3]:
-                            url = f"https://www.courtlistener.com/?q={suggestion.replace(' ', '+')}&type=r"
-                            st.markdown(f"[Search for: {suggestion}]({url})")
-
-                if court_results:
+                
+                elif court_results and (court_results['dockets'] or court_results['opinions']):
                     # Create sub-tabs for different types of court documents
-                    court_tabs = st.tabs(["Cases Found", "Court Opinions", "Case Details"])
+                    court_tabs = st.tabs(["Court Opinions", "Cases Found", "How to Access"])
                     
-                    with court_tabs[0]:  # Cases Found
-                        st.markdown(f"#### Found {court_results['total_found']} court cases")
+                    with court_tabs[0]:  # Court Opinions
+                        st.markdown("#### Court Decisions & Orders")
+                        
+                        if court_results['opinions']:
+                            st.success(f"Found {len(court_results['opinions'])} court opinions")
+                            
+                            for i, opinion in enumerate(court_results['opinions'], 1):
+                                with st.expander(f"{i}. {opinion['case_name']}", expanded=(i <= 3)):
+                                    col1, col2 = st.columns([3, 1])
+                                    
+                                    with col1:
+                                        st.markdown(f"**Case:** {opinion['case_name']}")
+                                        st.markdown(f"**Court:** {opinion['court']}")
+                                        st.markdown(f"**Date Filed:** {opinion['date_filed']}")
+                                        
+                                        if opinion.get('docket_number'):
+                                            st.markdown(f"**Docket Number:** {opinion['docket_number']}")
+                                        
+                                        if opinion.get('status'):
+                                            st.markdown(f"**Status:** {opinion['status']}")
+                                        
+                                        if opinion['judge']:
+                                            st.markdown(f"**Judge:** {opinion['judge']}")
+                                        
+                                        if opinion['summary']:
+                                            st.markdown("**Summary:**")
+                                            st.write(opinion['summary'])
+                                    
+                                    with col2:
+                                        if opinion['url']:
+                                            st.markdown(f"[View Full Document]({opinion['url']})")
+                                    
+                                    st.divider()
+                        else:
+                            st.info("No court opinions found. Try the Cases Found tab.")
+                    
+                    with court_tabs[1]:  # Cases Found
+                        st.markdown("#### Federal Court Cases")
                         
                         if court_results['dockets']:
+                            st.success(f"Found {len(court_results['dockets'])} court cases")
+                            
                             for i, docket in enumerate(court_results['dockets'][:10], 1):
                                 with st.expander(f"{i}. {docket['case_name']}", expanded=(i <= 3)):
                                     col1, col2 = st.columns([3, 1])
                                     
                                     with col1:
                                         st.markdown(f"**Case:** {docket['case_name']}")
-                                        if docket.get('matched_search'):
-                                            st.caption(f"Found via: {docket['matched_search']}")
                                         st.markdown(f"**Court:** {docket['court'].upper()}")
                                         st.markdown(f"**Docket #:** {docket['docket_number']}")
                                         
@@ -4508,83 +4540,33 @@ if st.session_state.current_page == "Case Search":
                                     with col2:
                                         st.markdown("**Actions:**")
                                         
-                                        # View on CourtListener
                                         if docket['url']:
                                             st.markdown(f"[View Full Docket]({docket['url']})")
                                         
-                                        # Internet Archive link if available
-                                        if docket.get('filepath_ia'):
-                                            st.markdown(f"[Archive.org Files]({docket['filepath_ia']})")
-                                        
-                                        # Get more details button
-                                        if st.button(f"Get Details", key=f"details_{docket['id']}"):
-                                            with st.spinner("Loading case details..."):
-                                                # Get docket entries
-                                                entries = get_docket_entries(docket['id'], courtlistener_token, 10)
-                                                if entries:
-                                                    st.markdown("**Recent Filings:**")
-                                                    for entry in entries[:5]:
-                                                        st.caption(f"• {entry['date_filed']}: {entry['description'][:100]}...")
-                                                
-                                                # Get parties
-                                                parties = get_case_parties(docket['id'], courtlistener_token)
-                                                if parties:
-                                                    st.markdown("**Parties:**")
-                                                    for party in parties:
-                                                        if party['type']:
-                                                            st.caption(f"• {party['name']} ({party['type']})")
-                                                        else:
-                                                            st.caption(f"• {party['name']}")
+                                        if docket.get('pacer_case_id'):
+                                            st.caption(f"PACER ID: {docket['pacer_case_id']}")
                                     
                                     st.divider()
                         else:
-                            st.info("No federal court cases found. Try different search terms.")
+                            st.info("No federal cases found. Check Court Opinions tab.")
                     
-                    with court_tabs[1]:  # Court Opinions
-                        st.markdown("#### Written Court Decisions")
-                        
-                        if court_results['opinions']:
-                            for i, opinion in enumerate(court_results['opinions'], 1):
-                                with st.expander(f"{i}. {opinion['case_name']}", expanded=(i == 1)):
-                                    st.markdown(f"**Case:** {opinion['case_name']}")
-                                    st.markdown(f"**Court:** {opinion['court']}")
-                                    st.markdown(f"**Date:** {opinion['date_filed']}")
-                                    
-                                    if opinion['judge']:
-                                        st.markdown(f"**Judge:** {opinion['judge']}")
-                                    
-                                    if opinion['summary']:
-                                        st.markdown("**Summary:**")
-                                        st.write(opinion['summary'])
-                                    
-                                    if opinion['url']:
-                                        st.markdown(f"[Read Full Opinion]({opinion['url']})")
-                                    
-                                    st.divider()
-                        else:
-                            st.info("No written opinions found for this search.")
-                    
-                    with court_tabs[2]:  # Case Details
+                    with court_tabs[2]:  # How to Access
                         st.markdown("#### How to Access Full Documents")
                         
                         st.markdown("""
                         **Free Access Options:**
                         
                         1. **CourtListener** - Many documents are free
-                           - Create a free account for basic access
-                           - Some documents require RECAP credits
+                        - Create a free account for basic access
+                        - Some documents require RECAP credits
                         
                         2. **PACER** - Official federal court database
-                           - $0.10 per page (capped at $3 per document)
-                           - Quarterly fee waivers available for researchers
+                        - $0.10 per page (capped at $3 per document)
+                        - Quarterly fee waivers available for researchers
                         
-                        3. **Internet Archive** - Historical documents
-                           - Many older cases are archived for free
-                           - Check the Archive.org links in case details
-                        
-                        4. **Local Courthouse** - Physical access
-                           - Public terminals often available
-                           - Some courts offer free remote access
+                        3. **State Courts** - For state-level cases
+                        - Each state has its own system
+                        - Many offer free public access online
                         
                         **What to Look For:**
                         - Indictments and criminal complaints
@@ -4594,46 +4576,33 @@ if st.session_state.current_page == "Case Search":
                         - Appeal briefs
                         """)
                         
-                        # Save search results for Bailey's review
-                        if court_results['dockets']:
+                        # Save button for court results
+                        if court_results['dockets'] or court_results['opinions']:
                             if st.button("Save Court Results to Ideas", type="primary"):
                                 if 'saved_ideas' not in st.session_state:
                                     st.session_state.saved_ideas = []
                                 
-                                # Create a summary of court findings
-                                court_summary = f"Found {len(court_results['dockets'])} court cases:\n"
+                                court_summary = f"Found {len(court_results['dockets'])} cases and {len(court_results['opinions'])} opinions:\n"
+                                
                                 for docket in court_results['dockets'][:3]:
-                                    court_summary += f"• {docket['case_name']} ({docket['court'].upper()})\n"
+                                    court_summary += f"- {docket['case_name']} ({docket['court'].upper()})\n"
+                                
+                                for opinion in court_results['opinions'][:3]:
+                                    court_summary += f"- {opinion['case_name']} (Opinion)\n"
                                 
                                 new_idea = {
                                     'id': len(st.session_state.saved_ideas) + 1,
                                     'title': f"{case_search} - Court Documents",
                                     'notes': court_summary,
-                                    'priority': 'High' if court_results['total_found'] > 0 else 'Medium',
+                                    'priority': 'High',
                                     'saved_date': datetime.now().strftime('%m/%d/%y'),
                                     'status': 'New'
                                 }
                                 st.session_state.saved_ideas.append(new_idea)
                                 st.success("Court results saved to ideas!")
-                
                 else:
-                    st.warning("No court documents found. This might be because:")
-                    st.caption("• The case name spelling differs in court records")
-                    st.caption("• The case is in state court (CourtListener focuses on federal)")
-                    st.caption("• The case predates electronic filing systems")
-                    
-                    # Suggest alternative searches
-                    st.markdown("### Try These Searches:")
-                    
-                    # Parse the search to suggest alternatives
-                    words = case_search.split()
-                    if len(words) > 1:
-                        # Try last name only
-                        st.markdown(f"• Last name only: **{words[-1]}**")
-                        # Try "United States v. [name]"
-                        st.markdown(f"• Criminal format: **United States v. {words[-1]}**")
-                        # Try "State v. [name]"  
-                        st.markdown(f"• State format: **State v. {words[-1]}**")
+                    st.info("No court documents found. This could mean the case is in state court, sealed, or uses different name spelling.")
+
 
         
         # Bailey's Strategy Generator
