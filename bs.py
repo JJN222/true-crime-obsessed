@@ -1094,7 +1094,7 @@ def calculate_trending_score(upvotes, comments, created_utc):
 # ============ TRUE CRIME RESEARCH API FUNCTIONS ============
 
 def search_wikidata(query, limit=25):
-    """Search Wikidata for people, cases, or events - AI-filtered for Bailey Sarian relevance"""
+    """Search Wikidata for people, cases, or events"""
     url = "https://www.wikidata.org/w/api.php"
     params = {
         "action": "wbsearchentities",
@@ -1102,7 +1102,7 @@ def search_wikidata(query, limit=25):
         "language": "en",
         "format": "json",
         "type": "item",
-        "limit": limit * 2,  # Get extra to filter
+        "limit": limit,
     }
     
     try:
@@ -1111,7 +1111,7 @@ def search_wikidata(query, limit=25):
             data = response.json()
             all_results = []
             
-            # First, collect all results
+            # Collect all results without filtering
             for hit in data.get("search", []):
                 all_results.append({
                     "id": hit.get("id"),
@@ -1120,75 +1120,61 @@ def search_wikidata(query, limit=25):
                     "url": f"https://www.wikidata.org/wiki/{hit.get('id')}"
                 })
             
-            # If we have results and an API key, use AI to filter
-            if all_results and api_key:
-                # Prepare results for AI evaluation
-                results_text = ""
-                for i, r in enumerate(all_results[:10], 1):  # Check first 10
-                    results_text += f"{i}. {r['label']} - {r['description']}\n"
-                
-                prompt = f"""You are helping Bailey Sarian find true crime cases for Murder, Mystery & Makeup.
-                
-Search query: "{query}"
-
-Results found:
-{results_text}
-
-Which of these results are relevant for Bailey's true crime content? 
-- INCLUDE: murders, serial killers, disappearances, unsolved mysteries, cult leaders, criminal cases
-- EXCLUDE: athletes, actors, politicians (unless involved in crimes), businesses, regular people
-
-Return ONLY the numbers of relevant results as a comma-separated list (e.g., "1,3,5").
-If NONE are relevant, return "NONE".
-If the search term itself is clearly not crime-related, return "NONE"."""
-
-                try:
-                    import openai
-                    openai.api_key = api_key
-                    
-                    response = openai.ChatCompletion.create(
-                        model="gpt-3.5-turbo",  # Faster and cheaper for filtering
-                        messages=[{"role": "user", "content": prompt}],
-                        max_tokens=50,
-                        temperature=0,  # Deterministic
-                        timeout=5
-                    )
-                    
-                    ai_response = response.choices[0].message.content.strip()
-                    
-                    if ai_response == "NONE":
-                        return []
-                    
-                    # Parse the numbers
-                    try:
-                        relevant_indices = [int(x.strip()) - 1 for x in ai_response.split(",")]
-                        filtered_results = [all_results[i] for i in relevant_indices if i < len(all_results)]
-                        return filtered_results[:limit]
-                    except:
-                        # If parsing fails, fall back to basic filtering
-                        pass
-                        
-                except Exception as e:
-                    print(f"AI filtering error: {e}")
-            
-            # Fallback: basic keyword filtering if AI fails or no API key
-            exclude_keywords = ['basketball', 'football', 'player', 'athlete', 'actor', 'politician', 'company']
-            include_keywords = ['murder', 'killer', 'crime', 'cult', 'prison', 'death', 'missing']
-            
-            filtered = []
-            for r in all_results:
-                desc = r['description'].lower()
-                if any(word in desc for word in exclude_keywords):
-                    continue
-                if any(word in desc for word in include_keywords) or not desc:
-                    filtered.append(r)
-            
-            return filtered[:limit]
+            # Return all results - let Bailey decide what's relevant
+            return all_results[:limit]
             
     except Exception as e:
         print(f"Wikidata search error: {e}")
     
     return []
+
+# Also update the Wikipedia tab to be more helpful:
+with source_tabs[4]:  # Wikipedia
+    # Try Wikidata first
+    if wikidata_results:
+        st.markdown("#### Wikidata Entries")
+        for item in wikidata_results[:5]:
+            st.write(f"**{item['label']}**")
+            st.caption(f"{item['description']}")
+            st.write(f"[View on Wikidata]({item['url']})")
+            # Add Wikipedia link
+            wiki_url = f"https://en.wikipedia.org/wiki/{item['label'].replace(' ', '_')}"
+            st.write(f"[Search Wikipedia]({wiki_url})")
+            st.divider()
+    
+    # Always also try Wikipedia's own search API
+    st.markdown("#### Wikipedia Articles")
+    wiki_api_url = "https://en.wikipedia.org/w/api.php"
+    params = {
+        "action": "opensearch",
+        "search": case_search,
+        "limit": 5,
+        "format": "json"
+    }
+    
+    try:
+        response = requests.get(wiki_api_url, params=params, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if len(data) > 1 and data[1]:  # data[1] contains titles
+                for i, title in enumerate(data[1][:5]):
+                    # data[2] has descriptions, data[3] has URLs
+                    description = data[2][i] if len(data) > 2 and i < len(data[2]) else ""
+                    url = data[3][i] if len(data) > 3 and i < len(data[3]) else f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                    
+                    st.write(f"**{title}**")
+                    if description:
+                        st.caption(description)
+                    st.write(f"[Read on Wikipedia]({url})")
+                    st.divider()
+            else:
+                st.info("No Wikipedia articles found")
+    except Exception as e:
+        st.info("Wikipedia search unavailable")
+        # Provide direct search link
+        wiki_search_url = f"https://en.wikipedia.org/w/index.php?search={case_search.replace(' ', '+')}"
+        st.markdown(f"[Search Wikipedia directly]({wiki_search_url})")
+
 
 def get_wikipedia_content(article_title, max_chars=3000):
     """Fetch actual Wikipedia article content"""
