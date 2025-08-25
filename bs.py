@@ -524,7 +524,7 @@ if main_section == "Research":
     </p>
     """, unsafe_allow_html=True)
     
-    research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows"]
+    research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Court Documents"]  # ADD "Court Documents" here
     
     # Ensure current_page is valid for Research section
     if st.session_state.current_page not in research_pages:
@@ -4133,7 +4133,7 @@ if st.session_state.current_page == "Case Search":
             
             # Then continue with your existing results display...
         
-        source_tabs = st.tabs(["Web Search", "YouTube", "Reddit", "Wikipedia", "Court Documents"])
+        source_tabs = st.tabs(["Web Search", "YouTube", "Reddit", "Wikipedia"])
         
         with source_tabs[0]:  # Web Search (first)
             if web_search_results:
@@ -4412,197 +4412,6 @@ if st.session_state.current_page == "Case Search":
                     st.write("---")
             else:
                 st.info("No Wikipedia entries found")
-
-        with source_tabs[4]:  # Court Documents tab
-            st.markdown("### Legal Documents & Court Records")
-            
-            # Get CourtListener API token
-            courtlistener_token = os.getenv("COURTLISTENER_API_TOKEN", "")
-            
-            if not courtlistener_token:
-                st.info("""
-                **Court documents are available with CourtListener API access.**
-                
-                To enable court document search:
-                1. Sign up at courtlistener.com (username: JJN222)
-                2. Get your API token from your account settings
-                3. Add it to your environment variables as COURTLISTENER_API_TOKEN
-                
-                Court documents can provide:
-                - Official case filings and decisions
-                - Party and attorney information
-                - Criminal charges and outcomes
-                - Timeline of legal proceedings
-                """)
-                
-                # Provide alternative free resources
-                st.markdown("### Alternative Court Resources")
-                
-                case_search = st.session_state.search_query
-                search_links = [
-                    {
-                        'name': 'CourtListener Public Search',
-                        'url': f'https://www.courtlistener.com/?q={case_search.replace(" ", "+")}&type=r&order_by=score+desc',
-                        'description': 'Search federal court cases and documents'
-                    },
-                    {
-                        'name': 'Google Scholar Legal',
-                        'url': f'https://scholar.google.com/scholar?q={case_search.replace(" ", "+")}+court+case',
-                        'description': 'Academic articles and legal opinions'
-                    },
-                    {
-                        'name': 'Justia Cases',
-                        'url': f'https://law.justia.com/search/?q={case_search.replace(" ", "+")}',
-                        'description': 'Free case law and legal information'
-                    }
-                ]
-                
-                for link in search_links:
-                    st.markdown(f"**[{link['name']}]({link['url']})**")
-                    st.caption(link['description'])
-                    st.divider()
-                    
-            else:
-                # Search CourtListener with API
-                with st.spinner("Searching court databases..."):
-                    court_results = search_courtlistener_cases(case_search, courtlistener_token)
-                
-                if court_results and court_results.get('no_results_message'):
-                    st.warning(court_results['no_results_message'])
-                
-                elif court_results and (court_results['dockets'] or court_results['opinions']):
-                    # Create sub-tabs for different types of court documents
-                    court_tabs = st.tabs(["Court Opinions", "Cases Found", "How to Access"])
-                    
-                    with court_tabs[0]:  # Court Opinions
-                        st.markdown("#### Court Decisions & Orders")
-                        
-                        if court_results['opinions']:
-                            st.success(f"Found {len(court_results['opinions'])} court opinions")
-                            
-                            for i, opinion in enumerate(court_results['opinions'], 1):
-                                with st.expander(f"{i}. {opinion['case_name']}", expanded=(i <= 3)):
-                                    col1, col2 = st.columns([3, 1])
-                                    
-                                    with col1:
-                                        st.markdown(f"**Case:** {opinion['case_name']}")
-                                        st.markdown(f"**Court:** {opinion['court']}")
-                                        st.markdown(f"**Date Filed:** {opinion['date_filed']}")
-                                        
-                                        if opinion.get('docket_number'):
-                                            st.markdown(f"**Docket Number:** {opinion['docket_number']}")
-                                        
-                                        if opinion.get('status'):
-                                            st.markdown(f"**Status:** {opinion['status']}")
-                                        
-                                        if opinion['judge']:
-                                            st.markdown(f"**Judge:** {opinion['judge']}")
-                                        
-                                        if opinion['summary']:
-                                            st.markdown("**Summary:**")
-                                            st.write(opinion['summary'])
-                                    
-                                    with col2:
-                                        if opinion['url']:
-                                            st.markdown(f"[View Full Document]({opinion['url']})")
-                                    
-                                    st.divider()
-                        else:
-                            st.info("No court opinions found. Try the Cases Found tab.")
-                    
-                    with court_tabs[1]:  # Cases Found
-                        st.markdown("#### Federal Court Cases")
-                        
-                        if court_results['dockets']:
-                            st.success(f"Found {len(court_results['dockets'])} court cases")
-                            
-                            for i, docket in enumerate(court_results['dockets'][:10], 1):
-                                with st.expander(f"{i}. {docket['case_name']}", expanded=(i <= 3)):
-                                    col1, col2 = st.columns([3, 1])
-                                    
-                                    with col1:
-                                        st.markdown(f"**Case:** {docket['case_name']}")
-                                        st.markdown(f"**Court:** {docket['court'].upper()}")
-                                        st.markdown(f"**Docket #:** {docket['docket_number']}")
-                                        
-                                        if docket['date_filed']:
-                                            st.markdown(f"**Filed:** {docket['date_filed']}")
-                                        if docket['date_terminated']:
-                                            st.markdown(f"**Terminated:** {docket['date_terminated']}")
-                                        
-                                        if docket['nature_of_suit']:
-                                            st.markdown(f"**Nature of Suit:** {docket['nature_of_suit']}")
-                                        if docket['cause']:
-                                            st.markdown(f"**Cause:** {docket['cause']}")
-                                        if docket['assigned_to']:
-                                            st.markdown(f"**Judge:** {docket['assigned_to']}")
-                                    
-                                    with col2:
-                                        st.markdown("**Actions:**")
-                                        
-                                        if docket['url']:
-                                            st.markdown(f"[View Full Docket]({docket['url']})")
-                                        
-                                        if docket.get('pacer_case_id'):
-                                            st.caption(f"PACER ID: {docket['pacer_case_id']}")
-                                    
-                                    st.divider()
-                        else:
-                            st.info("No federal cases found. Check Court Opinions tab.")
-                    
-                    with court_tabs[2]:  # How to Access
-                        st.markdown("#### How to Access Full Documents")
-                        
-                        st.markdown("""
-                        **Free Access Options:**
-                        
-                        1. **CourtListener** - Many documents are free
-                        - Create a free account for basic access
-                        - Some documents require RECAP credits
-                        
-                        2. **PACER** - Official federal court database
-                        - $0.10 per page (capped at $3 per document)
-                        - Quarterly fee waivers available for researchers
-                        
-                        3. **State Courts** - For state-level cases
-                        - Each state has its own system
-                        - Many offer free public access online
-                        
-                        **What to Look For:**
-                        - Indictments and criminal complaints
-                        - Motions and responses
-                        - Trial transcripts
-                        - Sentencing memorandums
-                        - Appeal briefs
-                        """)
-                        
-                        # Save button for court results
-                        if court_results['dockets'] or court_results['opinions']:
-                            if st.button("Save Court Results to Ideas", type="primary"):
-                                if 'saved_ideas' not in st.session_state:
-                                    st.session_state.saved_ideas = []
-                                
-                                court_summary = f"Found {len(court_results['dockets'])} cases and {len(court_results['opinions'])} opinions:\n"
-                                
-                                for docket in court_results['dockets'][:3]:
-                                    court_summary += f"- {docket['case_name']} ({docket['court'].upper()})\n"
-                                
-                                for opinion in court_results['opinions'][:3]:
-                                    court_summary += f"- {opinion['case_name']} (Opinion)\n"
-                                
-                                new_idea = {
-                                    'id': len(st.session_state.saved_ideas) + 1,
-                                    'title': f"{case_search} - Court Documents",
-                                    'notes': court_summary,
-                                    'priority': 'High',
-                                    'saved_date': datetime.now().strftime('%m/%d/%y'),
-                                    'status': 'New'
-                                }
-                                st.session_state.saved_ideas.append(new_idea)
-                                st.success("Court results saved to ideas!")
-                else:
-                    st.info("No court documents found. This could mean the case is in state court, sealed, or uses different name spelling.")
-
 
         
         # Bailey's Strategy Generator
@@ -5818,6 +5627,192 @@ elif st.session_state.current_page == "Movies & TV Shows":
                     media_type_for_url = "movie" if 'title' in item else "tv"
                     tmdb_url = f"https://www.themoviedb.org/{media_type_for_url}/{item.get('id')}"
                     st.markdown(f"[View on TMDB]({tmdb_url})")
+
+
+elif st.session_state.current_page == "Court Documents":
+    st.markdown("### Court Documents Search")
+    st.caption("Search federal court records and legal documents")
+    
+    # Search input
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        court_search = st.text_input(
+            "Search for a person or case",
+            placeholder="e.g., 'Bryan Kohberger', 'State v. Smith', 'United States v. Jones'",
+            key="court_search_input"
+        )
+    
+    with col2:
+        search_button = st.button("SEARCH COURTS", type="primary", use_container_width=True, key="search_courts_btn")
+    
+    # Get CourtListener API token
+    courtlistener_token = os.getenv("COURTLISTENER_API_TOKEN", "")
+    
+    if not courtlistener_token:
+        st.warning("""
+        **CourtListener API Required**
+        
+        To search court documents:
+        1. Sign up at [courtlistener.com](https://www.courtlistener.com)
+        2. Get your API token from account settings
+        3. Add to environment: COURTLISTENER_API_TOKEN
+        """)
+        
+        # Provide direct search links even without API
+        if court_search:
+            st.markdown("### Search Without API:")
+            
+            search_links = [
+                ('CourtListener', f'https://www.courtlistener.com/?q={court_search.replace(" ", "+")}&type=r'),
+                ('Google Scholar', f'https://scholar.google.com/scholar?q={court_search.replace(" ", "+")}+court+case'),
+                ('Justia', f'https://law.justia.com/search/?q={court_search.replace(" ", "+")}'),
+                ('FindLaw', f'https://caselaw.findlaw.com/search.html?q={court_search.replace(" ", "+")}')
+            ]
+            
+            cols = st.columns(len(search_links))
+            for idx, (name, url) in enumerate(search_links):
+                with cols[idx]:
+                    st.markdown(f"[{name}]({url})")
+    
+    elif search_button and court_search:
+        # Store search in session state
+        st.session_state.court_search_query = court_search
+        st.session_state.court_search_performed = True
+    
+    # Display results if search was performed
+    if st.session_state.get('court_search_performed', False) and courtlistener_token:
+        search_query = st.session_state.get('court_search_query', '')
+        
+        if search_query:
+            with st.spinner("Searching court databases..."):
+                court_results = search_courtlistener_cases(search_query, courtlistener_token)
+            
+            if court_results:
+                if court_results.get('no_results_message'):
+                    st.warning(court_results['no_results_message'])
+                
+                else:
+                    # Display results in tabs
+                    tab1, tab2, tab3 = st.tabs(["Court Opinions", "Federal Cases", "How to Access"])
+                    
+                    with tab1:
+                        if court_results.get('opinions'):
+                            st.success(f"Found {len(court_results['opinions'])} court opinions")
+                            
+                            for i, opinion in enumerate(court_results['opinions'], 1):
+                                with st.expander(f"{i}. {opinion['case_name'][:80]}...", expanded=(i <= 2)):
+                                    col1, col2 = st.columns([3, 1])
+                                    
+                                    with col1:
+                                        st.markdown(f"**Case:** {opinion['case_name']}")
+                                        st.markdown(f"**Court:** {opinion.get('court', 'Unknown')}")
+                                        st.markdown(f"**Date:** {opinion.get('date_filed', 'Unknown')}")
+                                        
+                                        if opinion.get('judge'):
+                                            st.markdown(f"**Judge:** {opinion['judge']}")
+                                        
+                                        if opinion.get('summary'):
+                                            st.markdown("**Summary:**")
+                                            st.write(opinion['summary'][:500] + "..." if len(opinion.get('summary', '')) > 500 else opinion.get('summary', ''))
+                                    
+                                    with col2:
+                                        if opinion.get('url'):
+                                            st.markdown(f"[View Full Opinion]({opinion['url']})")
+                        else:
+                            st.info("No court opinions found")
+                    
+                    with tab2:
+                        if court_results.get('dockets'):
+                            st.success(f"Found {len(court_results['dockets'])} federal cases")
+                            
+                            for i, docket in enumerate(court_results['dockets'][:10], 1):
+                                with st.expander(f"{i}. {docket['case_name'][:80]}...", expanded=(i <= 2)):
+                                    col1, col2 = st.columns([3, 1])
+                                    
+                                    with col1:
+                                        st.markdown(f"**Case:** {docket['case_name']}")
+                                        st.markdown(f"**Court:** {docket.get('court', 'Unknown').upper()}")
+                                        st.markdown(f"**Docket #:** {docket.get('docket_number', 'Unknown')}")
+                                        
+                                        if docket.get('date_filed'):
+                                            st.markdown(f"**Filed:** {docket['date_filed']}")
+                                        
+                                        if docket.get('nature_of_suit'):
+                                            st.markdown(f"**Type:** {docket['nature_of_suit']}")
+                                        
+                                        if docket.get('assigned_to'):
+                                            st.markdown(f"**Judge:** {docket['assigned_to']}")
+                                    
+                                    with col2:
+                                        if docket.get('url'):
+                                            st.markdown(f"[View Docket]({docket['url']})")
+                        else:
+                            st.info("No federal cases found")
+                    
+                    with tab3:
+                        st.markdown("""
+                        ### Accessing Court Documents
+                        
+                        **Free Resources:**
+                        - **CourtListener** - Free RECAP archive
+                        - **Google Scholar** - Legal opinions and citations
+                        - **Justia** - Free case law database
+                        - **State Courts** - Many states offer free online access
+                        
+                        **Paid Resources:**
+                        - **PACER** - $0.10/page (max $3/document)
+                        - **Westlaw/LexisNexis** - Professional legal databases
+                        
+                        **Tips for Bailey's Research:**
+                        - Search by defendant's last name + "murder" or "homicide"
+                        - Try "State v. [LastName]" or "United States v. [LastName]"
+                        - Check both federal and state databases
+                        - Look for appellate opinions (often more detailed)
+                        """)
+                        
+                        # Save to ideas button
+                        if court_results.get('dockets') or court_results.get('opinions'):
+                            if st.button("Save Results to Ideas", type="primary"):
+                                if 'saved_ideas' not in st.session_state:
+                                    st.session_state.saved_ideas = []
+                                
+                                summary = f"Court search for: {search_query}\n"
+                                summary += f"Found {len(court_results.get('dockets', []))} cases, "
+                                summary += f"{len(court_results.get('opinions', []))} opinions"
+                                
+                                new_idea = {
+                                    'id': len(st.session_state.saved_ideas) + 1,
+                                    'title': f"{search_query} - Court Docs",
+                                    'notes': summary,
+                                    'priority': 'Medium',
+                                    'saved_date': datetime.now().strftime('%m/%d/%y'),
+                                    'status': 'New'
+                                }
+                                st.session_state.saved_ideas.append(new_idea)
+                                st.success("Saved to ideas!")
+    
+    # Quick search suggestions
+    if not st.session_state.get('court_search_performed', False):
+        st.markdown("### Quick Searches")
+        
+        quick_searches = [
+            "Bryan Kohberger",
+            "Alex Murdaugh", 
+            "Chad Daybell",
+            "Lori Vallow",
+            "Sarah Boone",
+            "Letecia Stauch"
+        ]
+        
+        cols = st.columns(3)
+        for idx, name in enumerate(quick_searches):
+            with cols[idx % 3]:
+                if st.button(name, key=f"quick_{name}"):
+                    st.session_state.court_search_query = name
+                    st.session_state.court_search_performed = True
+                    st.rerun()
+
             
 elif st.session_state.current_page == "Saved Ideas":
     st.markdown("""
