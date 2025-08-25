@@ -2429,7 +2429,7 @@ def get_youtube_podcast_channels(api_key=None, category="general", max_results=2
 
     
 def search_courtlistener_cases(query, api_token, limit=10):
-    """Search CourtListener for criminal cases - handles middle names/initials"""
+    """Search CourtListener - optimized for their API structure"""
     if not api_token:
         return None
         
@@ -2441,147 +2441,139 @@ def search_courtlistener_cases(query, api_token, limit=10):
         'total_found': 0
     }
     
-    # Parse the name to handle middle names/initials
-    name_parts = query.strip().split()
-    
-    # Create search variations to handle middle names
-    search_terms = [query]  # Original search
-    
-    # If it's a two-part name, it might be missing a middle name/initial
-    if len(name_parts) == 2:
-        first_name = name_parts[0]
-        last_name = name_parts[1]
-        # Add wildcards for potential middle names/initials
-        search_terms.extend([
-            f'"{first_name} {last_name}"',  # Exact as entered
-            f'{first_name} {last_name}',  # Without quotes
-            f'"{first_name}" AND "{last_name}"',  # Both parts must be present
-        ])
-    
-    all_dockets = []
     all_opinions = []
     seen_ids = set()
     
-    for search_term in search_terms:
-        try:
-            # Search opinions
-            opinions_url = "https://www.courtlistener.com/api/rest/v4/search/"
+    try:
+        # Search the opinions endpoint with basic query
+        # The API searches the full text, not just case names
+        opinions_url = "https://www.courtlistener.com/api/rest/v4/search/"
+        
+        # Try different search strategies
+        search_queries = [
+            query,  # Plain search
+            f'"{query}"',  # Exact phrase
+        ]
+        
+        for search_term in search_queries:
             params = {
                 'q': search_term,
-                'type': 'o',
+                'type': 'o',  # opinions type
                 'order_by': 'score desc',
-                'page_size': 30
+                'page_size': 50  # Get more results since we need to filter
             }
             
-            response = requests.get(opinions_url, headers=headers, params=params, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                for item in data.get('results', []):
-                    case_name = item.get('caseName', '')
-                    snippet = item.get('snippet', '')
-                    case_text = (case_name + ' ' + snippet)
-                    
-                    # Smart name matching
-                    if is_name_match(query, case_text):
-                        opinion_id = item.get('id')
-                        if opinion_id not in seen_ids:
-                            seen_ids.add(opinion_id)
-                            all_opinions.append({
-                                'case_name': case_name,
-                                'court': item.get('court', ''),
-                                'date_filed': item.get('dateFiled', ''),
-                                'docket_number': item.get('docket', {}).get('docket_number', '') if isinstance(item.get('docket'), dict) else '',
-                                'citation': item.get('citation', []),
-                                'summary': snippet,
-                                'url': f"https://www.courtlistener.com{item.get('absolute_url', '')}",
-                                'judge': item.get('judge', ''),
-                                'status': item.get('status', 'Published') if item.get('status') else 'Published'
-                            })
-            
-            # Search dockets
-            dockets_url = "https://www.courtlistener.com/api/rest/v4/dockets/"
-            params = {
-                'q': search_term,
-                'order_by': '-date_filed',
-                'page_size': 30
-            }
-            
-            response = requests.get(dockets_url, headers=headers, params=params, timeout=10)
+            response = requests.get(opinions_url, headers=headers, params=params, timeout=15)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                for docket in data.get('results', []):
-                    case_name = docket.get('case_name', '')
-                    
-                    # Smart name matching
-                    if is_name_match(query, case_name):
-                        docket_id = docket.get('id')
+                # The API returns results differently than expected
+                # Let's check the actual structure
+                if 'results' in data:
+                    for item in data.get('results', []):
+                        # Get all text fields to search
+                        case_name = item.get('caseName', '') or ''
+                        case_name_full = item.get('caseNameFull', '') or ''
+                        snippet = item.get('snippet', '') or ''
+                        text = item.get('text', '') or ''
                         
-                        if docket_id not in seen_ids:
-                            seen_ids.add(docket_id)
+                        # Combine all searchable text
+                        all_text = f"{case_name} {case_name_full} {snippet} {text}".lower()
+                        
+                        # Check if our search query appears anywhere
+                        if query.lower() in all_text:
+                            item_id = item.get('id') or item.get('resource_uri', '').split('/')[-2]
                             
-                            # Check if criminal
-                            nature_of_suit = docket.get('nature_of_suit', '').lower()
-                            cause = docket.get('cause', '').lower()
-                            
-                            is_likely_criminal = any(term in case_name.lower() + nature_of_suit + cause 
-                                                    for term in ['criminal', 'murder', 'homicide', 
-                                                               'death', 'state v', 'united states v',
-                                                               'people v', 'commonwealth v'])
-                            
-                            all_dockets.append({
-                                'id': docket_id,
-                                'case_name': case_name,
-                                'court': docket.get('court_id', ''),
-                                'docket_number': docket.get('docket_number', ''),
-                                'date_filed': docket.get('date_filed', ''),
-                                'date_terminated': docket.get('date_terminated', ''),
-                                'nature_of_suit': docket.get('nature_of_suit', ''),
-                                'cause': docket.get('cause', ''),
-                                'assigned_to': docket.get('assigned_to_str', ''),
-                                'url': f"https://www.courtlistener.com{docket.get('absolute_url', '')}",
-                                'pacer_case_id': docket.get('pacer_case_id', ''),
-                                'is_likely_criminal': is_likely_criminal
-                            })
+                            if item_id and item_id not in seen_ids:
+                                seen_ids.add(item_id)
+                                
+                                # Extract docket number if available
+                                docket_num = ''
+                                if 'docket' in item:
+                                    if isinstance(item['docket'], dict):
+                                        docket_num = item['docket'].get('docket_number', '')
+                                    elif isinstance(item['docket'], str):
+                                        # It might be a URL, extract the docket number
+                                        docket_num = item['docket'].split('/')[-2] if '/' in item['docket'] else ''
+                                
+                                all_opinions.append({
+                                    'case_name': case_name or case_name_full or 'Unknown Case',
+                                    'court': item.get('court', '') or item.get('court_citation_string', ''),
+                                    'date_filed': item.get('dateFiled', '') or item.get('date_filed', ''),
+                                    'docket_number': docket_num,
+                                    'citation': item.get('citation', []),
+                                    'summary': snippet[:500] if snippet else text[:500] if text else '',
+                                    'url': f"https://www.courtlistener.com{item.get('absolute_url', '')}" if item.get('absolute_url') else '',
+                                    'judge': item.get('judge', '') or item.get('panel', ''),
+                                    'status': item.get('status', 'Published')
+                                })
             
-            if all_opinions or all_dockets:
+            # If we found results, stop searching
+            if all_opinions:
                 break
                 
-        except Exception as e:
-            print(f"Search error: {e}")
-            continue
+    except Exception as e:
+        print(f"Search error: {str(e)}")
     
-    # Sort criminal cases first
-    all_dockets.sort(key=lambda x: (x.get('is_likely_criminal', False), x.get('date_filed', '')), reverse=True)
+    # Also try the dockets endpoint with a simpler search
+    try:
+        dockets_url = "https://www.courtlistener.com/api/rest/v4/dockets/"
+        params = {
+            'q': query,
+            'page_size': 20
+        }
+        
+        response = requests.get(dockets_url, headers=headers, params=params, timeout=15)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            dockets = []
+            for docket in data.get('results', []):
+                case_name = docket.get('case_name', '')
+                
+                # Only include if the query appears in the case name
+                if query.lower() in case_name.lower():
+                    dockets.append({
+                        'id': docket.get('id'),
+                        'case_name': case_name,
+                        'court': docket.get('court_id', ''),
+                        'docket_number': docket.get('docket_number', ''),
+                        'date_filed': docket.get('date_filed', ''),
+                        'date_terminated': docket.get('date_terminated', ''),
+                        'nature_of_suit': docket.get('nature_of_suit', ''),
+                        'cause': docket.get('cause', ''),
+                        'assigned_to': docket.get('assigned_to_str', ''),
+                        'url': f"https://www.courtlistener.com{docket.get('absolute_url', '')}" if docket.get('absolute_url') else '',
+                        'pacer_case_id': docket.get('pacer_case_id', '')
+                    })
+            
+            results['dockets'] = dockets
+            
+    except Exception as e:
+        print(f"Docket search error: {str(e)}")
     
     results['opinions'] = all_opinions
-    results['dockets'] = all_dockets
-    results['total_found'] = len(all_opinions) + len(all_dockets)
+    results['total_found'] = len(all_opinions) + len(results['dockets'])
     
-    if not all_opinions and not all_dockets:
-        name_parts = query.split()
-        suggestions = []
-        if len(name_parts) >= 2:
-            suggestions = [
-                f'Just last name: "{name_parts[-1]}"',
-                f'With wildcard: {name_parts[0]}* {name_parts[-1]}',
-                f'State v. {name_parts[-1]}',
-            ]
-        
+    # If no results, provide helpful message with direct link
+    if not all_opinions and not results['dockets']:
         results['no_results_message'] = f"""
-No cases found for "{query}".
+No cases found for "{query}" via API.
 
-The case might include a middle name or initial. Try:
-{chr(10).join(['• ' + s for s in suggestions]) if suggestions else '• Searching just the last name'}
+**This is likely because:**
+- The case title doesn't contain the exact name (e.g., "Associated Press v. Second Judicial District")
+- The case is in state court (not federal)
+- The API search works differently than the website
 
 **Search directly on CourtListener:**
-[Click here to search](https://www.courtlistener.com/?q={query.replace(' ', '+')}&type=o)
+[Click here to search on their website](https://www.courtlistener.com/?q={query.replace(' ', '+')}&type=o)
+
+The website search is more comprehensive than the API.
 """
     
     return results
-
 def is_name_match(search_query, case_text):
     """
     Smart matching that handles middle names and initials
