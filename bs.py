@@ -749,209 +749,81 @@ def get_top_comments(subreddit, post_id, limit=3):
   
   return []
 
-# def search_with_serper(query, api_key, search_type="search", num_results=10):
-#     """
-#     Search the web using Serper API for real-time information
-#     search_type: "search" for general search, "news" for news, "images" for images
-#     """
-#     if not api_key:
-#         return None
+def search_with_serper(query, api_key, search_type="search", num_results=10):
+    """Search the web using Serper API for real-time information"""
+    if not api_key:
+        return None
     
-#     try:
-#         # Serper API endpoint
-#         if search_type == "news":
-#             url = "https://google.serper.dev/news"
-#         elif search_type == "images":
-#             url = "https://google.serper.dev/images"
-#         else:
-#             url = "https://google.serper.dev/search"
+    try:
+        # Serper API endpoint
+        if search_type == "news":
+            url = "https://google.serper.dev/news"
+        else:
+            url = "https://google.serper.dev/search"
         
-#         # Prepare the request
-#         headers = {
-#             'X-API-KEY': api_key,
-#             'Content-Type': 'application/json'
-#         }
+        headers = {
+            'X-API-KEY': api_key,
+            'Content-Type': 'application/json'
+        }
         
-#         # For true crime searches, add context
-#         if "murder" not in query.lower() and "killer" not in query.lower():
-#             enhanced_query = f"{query} murder case crime"
-#         else:
-#             enhanced_query = query
+        # For true crime searches, add context
+        enhanced_query = f"{query} murder case crime true crime"
         
-#         payload = {
-#             'q': enhanced_query,
-#             'num': num_results,
-#             'gl': 'us',  # Country
-#             'hl': 'en'   # Language
-#         }
+        payload = {
+            'q': enhanced_query,
+            'num': num_results,
+            'gl': 'us',
+            'hl': 'en'
+        }
         
-#         # Make the request
-#         response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
         
-#         if response.status_code == 200:
-#             data = response.json()
+        if response.status_code == 200:
+            data = response.json()
             
-#             # Format results based on search type
-#             if search_type == "news":
-#                 results = []
-#                 for item in data.get('news', []):
-#                     results.append({
-#                         'title': item.get('title', ''),
-#                         'snippet': item.get('snippet', ''),
-#                         'link': item.get('link', ''),
-#                         'date': item.get('date', ''),
-#                         'source': item.get('source', '')
-#                     })
-#                 return results
+            results = {
+                'organic': [],
+                'news': [],
+                'answer_box': data.get('answerBox', {}),
+                'knowledge_graph': data.get('knowledgeGraph', {}),
+            }
             
-#             elif search_type == "images":
-#                 results = []
-#                 for item in data.get('images', [])[:5]:  # Limit to 5 images
-#                     results.append({
-#                         'title': item.get('title', ''),
-#                         'imageUrl': item.get('imageUrl', ''),
-#                         'link': item.get('link', ''),
-#                         'source': item.get('source', '')
-#                     })
-#                 return results
+            # Process organic results
+            for item in data.get('organic', []):
+                results['organic'].append({
+                    'title': item.get('title', ''),
+                    'snippet': item.get('snippet', ''),
+                    'link': item.get('link', ''),
+                    'date': item.get('date', ''),
+                    'source': item.get('source', '')
+                })
             
-#             else:  # Regular search
-#                 results = {
-#                     'organic': [],
-#                     'answer_box': data.get('answerBox', {}),
-#                     'knowledge_graph': data.get('knowledgeGraph', {}),
-#                     'related_searches': data.get('relatedSearches', [])
-#                 }
-                
-#                 # Process organic results
-#                 for item in data.get('organic', []):
-#                     results['organic'].append({
-#                         'title': item.get('title', ''),
-#                         'snippet': item.get('snippet', ''),
-#                         'link': item.get('link', ''),
-#                         'position': item.get('position', 0)
-#                     })
-                
-#                 return results
-#         else:
-#             print(f"Serper API error: {response.status_code}")
-#             return None
+            # Also get news results
+            news_response = requests.post(
+                "https://google.serper.dev/news",
+                headers=headers,
+                json={'q': enhanced_query, 'num': 5},
+                timeout=10
+            )
             
-#     except Exception as e:
-#         print(f"Serper search error: {e}")
-#         return None
-
-# def get_comprehensive_case_info(case_name, serper_api_key):
-#     """
-#     Get comprehensive information about a true crime case using Serper
-#     """
-#     if not serper_api_key:
-#         return None
-    
-#     all_info = {
-#         'general': None,
-#         'news': None,
-#         'images': None,
-#         'timeline': None,
-#         'victims': None,
-#         'investigation': None
-#     }
-    
-#     try:
-#         # General search
-#         general_results = search_with_serper(case_name, serper_api_key, "search", 10)
-#         if general_results:
-#             all_info['general'] = general_results
-        
-#         # News search
-#         news_results = search_with_serper(f"{case_name} latest news updates", serper_api_key, "news", 10)
-#         if news_results:
-#             all_info['news'] = news_results
-        
-#         # Images search
-#         images_results = search_with_serper(f"{case_name} crime scene photos evidence", serper_api_key, "images", 5)
-#         if images_results:
-#             all_info['images'] = images_results
-        
-#         # Timeline search
-#         timeline_results = search_with_serper(f"{case_name} timeline of events chronology", serper_api_key, "search", 5)
-#         if timeline_results:
-#             all_info['timeline'] = timeline_results
-        
-#         # Victims information
-#         victims_results = search_with_serper(f"{case_name} victims names details", serper_api_key, "search", 5)
-#         if victims_results:
-#             all_info['victims'] = victims_results
-        
-#         # Investigation details
-#         investigation_results = search_with_serper(f"{case_name} investigation police evidence trial", serper_api_key, "search", 5)
-#         if investigation_results:
-#             all_info['investigation'] = investigation_results
-        
-#         return all_info
-        
-#     except Exception as e:
-#         print(f"Error getting comprehensive case info: {e}")
-#         return None
-
-
-# def extract_case_facts_from_serper(serper_results):
-#     """
-#     Extract key facts about a case from Serper search results
-#     """
-#     facts = {
-#         'date': None,
-#         'location': None,
-#         'victims': [],
-#         'suspects': [],
-#         'status': None,
-#         'key_details': []
-#     }
-    
-#     if not serper_results:
-#         return facts
-    
-#     try:
-#         # Check knowledge graph first
-#         if serper_results.get('general') and serper_results['general'].get('knowledge_graph'):
-#             kg = serper_results['general']['knowledge_graph']
-#             if kg.get('description'):
-#                 facts['key_details'].append(kg['description'])
-        
-#         # Extract from organic results
-#         if serper_results.get('general') and serper_results['general'].get('organic'):
-#             for result in serper_results['general']['organic'][:5]:
-#                 snippet = result.get('snippet', '').lower()
-                
-#                 # Try to extract date
-#                 import re
-#                 date_pattern = r'\b(19\d{2}|20\d{2})\b'
-#                 dates = re.findall(date_pattern, result.get('snippet', ''))
-#                 if dates and not facts['date']:
-#                     facts['date'] = dates[0]
-                
-#                 # Look for location mentions
-#                 # This is simplified - you might want to use NER for better results
-#                 if 'in ' in snippet:
-#                     words_after_in = snippet.split('in ')[1].split()[0:3]
-#                     potential_location = ' '.join(words_after_in)
-#                     if not facts['location'] and len(potential_location) > 3:
-#                         facts['location'] = potential_location.title()
-                
-#                 # Look for status keywords
-#                 if not facts['status']:
-#                     if 'unsolved' in snippet:
-#                         facts['status'] = 'Unsolved'
-#                     elif 'convicted' in snippet or 'guilty' in snippet:
-#                         facts['status'] = 'Solved - Conviction'
-#                     elif 'acquitted' in snippet:
-#                         facts['status'] = 'Solved - Acquitted'
-        
-#         return facts
-        
-#     except Exception as e:
-#         print(f"Error extracting facts: {e}")
-#         return facts
+            if news_response.status_code == 200:
+                news_data = news_response.json()
+                for item in news_data.get('news', []):
+                    results['news'].append({
+                        'title': item.get('title', ''),
+                        'snippet': item.get('snippet', ''),
+                        'link': item.get('link', ''),
+                        'date': item.get('date', ''),
+                        'source': item.get('source', '')
+                    })
+            
+            return results
+        else:
+            return None
+            
+    except Exception as e:
+        print(f"Serper search error: {e}")
+        return None
 
 def search_with_perplexity(query, api_key, search_type="comprehensive"):
     """
@@ -4125,9 +3997,9 @@ if st.session_state.current_page == "Case Search":
             
             # Then continue with your existing results display...
         
-        source_tabs = st.tabs(["Web Search", "YouTube", "Reddit", "Wikipedia"])
+        source_tabs = st.tabs(["Overview", "Web Search", "YouTube", "Reddit", "Wikipedia"])
         
-        with source_tabs[0]:  # Web Search (first)
+        with source_tabs[0]:  # Overview (Perplexity) - previously "Web Search"
             if web_search_results:
 
                 # Display the formatted Perplexity results
@@ -4146,7 +4018,90 @@ if st.session_state.current_page == "Case Search":
         
         # In the source_tabs section, replace the YouTube tab (source_tabs[1]) with this:
 
-        with source_tabs[1]:  # YouTube tab
+        with source_tabs[1]:  # Web Search (Serper) - NEW TAB
+            serper_api_key = os.getenv("SERPER_API_KEY", "")
+            
+            if not serper_api_key:
+                st.info("""
+                **Web search requires Serper API key**
+                
+                To enable web search:
+                1. Sign up at [serper.dev](https://serper.dev)
+                2. Get your API key
+                3. Add to environment: SERPER_API_KEY
+                
+                Serper provides real-time Google search results.
+                """)
+            else:
+                with st.spinner("Searching the web..."):
+                    serper_results = search_with_serper(case_search, serper_api_key, num_results=15)
+                
+                if serper_results:
+                    # Create sub-tabs for different result types
+                    web_tabs = st.tabs(["Search Results", "Recent News", "Quick Facts"])
+                    
+                    with web_tabs[0]:  # Search Results
+                        st.markdown("#### Web Search Results")
+                        
+                        if serper_results.get('organic'):
+                            for i, result in enumerate(serper_results['organic'][:10], 1):
+                                with st.expander(f"{i}. {result['title'][:80]}...", expanded=(i <= 3)):
+                                    st.markdown(f"**Source:** {result.get('source', 'Unknown')}")
+                                    if result.get('date'):
+                                        st.caption(f"Date: {result['date']}")
+                                    st.write(result['snippet'])
+                                    st.markdown(f"[Read More]({result['link']})")
+                        else:
+                            st.info("No search results found")
+                    
+                    with web_tabs[1]:  # Recent News
+                        st.markdown("#### Recent News Coverage")
+                        
+                        if serper_results.get('news'):
+                            for i, article in enumerate(serper_results['news'], 1):
+                                with st.container():
+                                    st.markdown(f"**{i}. {article['title']}**")
+                                    col1, col2 = st.columns([3, 1])
+                                    with col1:
+                                        st.caption(f"{article.get('source', 'Unknown')} - {article.get('date', 'Unknown date')}")
+                                        st.write(article['snippet'])
+                                    with col2:
+                                        st.markdown(f"[Read Article]({article['link']})")
+                                    st.divider()
+                        else:
+                            st.info("No recent news found")
+                    
+                    with web_tabs[2]:  # Quick Facts
+                        st.markdown("#### Quick Facts")
+                        
+                        # Show answer box if available
+                        if serper_results.get('answer_box') and serper_results['answer_box']:
+                            answer = serper_results['answer_box']
+                            if answer.get('answer'):
+                                st.markdown("**Direct Answer:**")
+                                st.info(answer['answer'])
+                            if answer.get('snippet'):
+                                st.write(answer['snippet'])
+                        
+                        # Show knowledge graph if available
+                        if serper_results.get('knowledge_graph') and serper_results['knowledge_graph']:
+                            kg = serper_results['knowledge_graph']
+                            if kg.get('title'):
+                                st.markdown(f"**{kg['title']}**")
+                            if kg.get('description'):
+                                st.write(kg['description'])
+                            if kg.get('attributes'):
+                                st.markdown("**Details:**")
+                                for key, value in kg['attributes'].items():
+                                    st.write(f"• **{key}:** {value}")
+                        
+                        if not serper_results.get('answer_box') and not serper_results.get('knowledge_graph'):
+                            st.info("No quick facts available. Check search results for details.")
+                else:
+                    st.warning("No web results found. Try different search terms.")
+
+
+        with source_tabs[2]:  # YouTube tab
             if youtube_count and youtube_count > 0:
                 st.markdown("Data provided by YouTube API Services")  # ADD HERE
                 st.write(f"Found {youtube_count:,} videos about this case")
@@ -4384,7 +4339,7 @@ if st.session_state.current_page == "Case Search":
             else:
                 st.info("No YouTube videos found for this search term")
 
-        with source_tabs[2]:  # Reddit (index 2)
+        with source_tabs[3]:  # Reddit (index 2)
             if reddit_results:
                 for post in reddit_results[:10]:
                     post_data = post['data']
@@ -4395,7 +4350,7 @@ if st.session_state.current_page == "Case Search":
             else:
                 st.info("No Reddit discussions found")
 
-        with source_tabs[3]:  # Wikipedia (fourth)
+        with source_tabs[4]:  # Wikipedia (fourth)
             if wikidata_results:
                 for item in wikidata_results[:5]:
                     st.write(f"**{item['label']}**")
