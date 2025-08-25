@@ -4018,7 +4018,7 @@ if st.session_state.current_page == "Case Search":
         
         # In the source_tabs section, replace the YouTube tab (source_tabs[1]) with this:
 
-        with source_tabs[1]:  # Web Search (Serper) - NEW TAB
+        with source_tabs[1]:  # Web Search (Serper)
             serper_api_key = os.getenv("SERPER_API_KEY", "")
             
             if not serper_api_key:
@@ -4034,69 +4034,35 @@ if st.session_state.current_page == "Case Search":
                 """)
             else:
                 with st.spinner("Searching the web..."):
-                    serper_results = search_with_serper(case_search, serper_api_key, num_results=15)
+                    serper_results = search_with_serper(case_search, serper_api_key, num_results=10)
                 
                 if serper_results:
-                    # Create sub-tabs for different result types
-                    web_tabs = st.tabs(["Search Results", "Recent News", "Quick Facts"])
+                    # Top Search Results
+                    st.markdown("#### Top Search Results")
                     
-                    with web_tabs[0]:  # Search Results
-                        st.markdown("#### Web Search Results")
-                        
-                        if serper_results.get('organic'):
-                            for i, result in enumerate(serper_results['organic'][:10], 1):
-                                with st.expander(f"{i}. {result['title'][:80]}...", expanded=(i <= 3)):
-                                    st.markdown(f"**Source:** {result.get('source', 'Unknown')}")
-                                    if result.get('date'):
-                                        st.caption(f"Date: {result['date']}")
-                                    st.write(result['snippet'])
-                                    st.markdown(f"[Read More]({result['link']})")
-                        else:
-                            st.info("No search results found")
+                    if serper_results.get('organic'):
+                        for i, result in enumerate(serper_results['organic'][:5], 1):
+                            st.markdown(f"**{i}. {result['title']}**")
+                            if result.get('source'):
+                                st.caption(f"Source: {result.get('source')}")
+                            st.write(result['snippet'])
+                            st.markdown(f"[Read More]({result['link']})")
+                            st.divider()
+                    else:
+                        st.info("No search results found")
                     
-                    with web_tabs[1]:  # Recent News
-                        st.markdown("#### Recent News Coverage")
-                        
-                        if serper_results.get('news'):
-                            for i, article in enumerate(serper_results['news'], 1):
-                                with st.container():
-                                    st.markdown(f"**{i}. {article['title']}**")
-                                    col1, col2 = st.columns([3, 1])
-                                    with col1:
-                                        st.caption(f"{article.get('source', 'Unknown')} - {article.get('date', 'Unknown date')}")
-                                        st.write(article['snippet'])
-                                    with col2:
-                                        st.markdown(f"[Read Article]({article['link']})")
-                                    st.divider()
-                        else:
-                            st.info("No recent news found")
+                    # Recent News
+                    st.markdown("#### Recent News")
                     
-                    with web_tabs[2]:  # Quick Facts
-                        st.markdown("#### Quick Facts")
-                        
-                        # Show answer box if available
-                        if serper_results.get('answer_box') and serper_results['answer_box']:
-                            answer = serper_results['answer_box']
-                            if answer.get('answer'):
-                                st.markdown("**Direct Answer:**")
-                                st.info(answer['answer'])
-                            if answer.get('snippet'):
-                                st.write(answer['snippet'])
-                        
-                        # Show knowledge graph if available
-                        if serper_results.get('knowledge_graph') and serper_results['knowledge_graph']:
-                            kg = serper_results['knowledge_graph']
-                            if kg.get('title'):
-                                st.markdown(f"**{kg['title']}**")
-                            if kg.get('description'):
-                                st.write(kg['description'])
-                            if kg.get('attributes'):
-                                st.markdown("**Details:**")
-                                for key, value in kg['attributes'].items():
-                                    st.write(f"• **{key}:** {value}")
-                        
-                        if not serper_results.get('answer_box') and not serper_results.get('knowledge_graph'):
-                            st.info("No quick facts available. Check search results for details.")
+                    if serper_results.get('news'):
+                        for i, article in enumerate(serper_results['news'][:5], 1):
+                            st.markdown(f"**{article['title']}**")
+                            st.caption(f"{article.get('source', 'Unknown')} - {article.get('date', 'Unknown date')}")
+                            st.write(article['snippet'])
+                            st.markdown(f"[Read Article]({article['link']})")
+                            st.divider()
+                    else:
+                        st.info("No recent news found")
                 else:
                     st.warning("No web results found. Try different search terms.")
 
