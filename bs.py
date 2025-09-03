@@ -586,17 +586,6 @@ else:  # PRODUCTION
     )
     st.session_state.current_page = selected_page
 
-# Add Privacy Policy link at the bottom - always visible
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<p style="font-family: 'Inter', sans-serif; font-size: 12px; color: #999; margin-bottom: 0.5rem;">
-LEGAL
-</p>
-""", unsafe_allow_html=True)
-
-if st.sidebar.button("Privacy Policy", key="privacy_policy_nav", use_container_width=True):
-    st.session_state.current_page = "Privacy Policy"
-    st.rerun()
 
 st.sidebar.markdown("---")
 
@@ -6331,33 +6320,37 @@ elif st.session_state.current_page == "Privacy Policy":
 # Simple footer with legal compliance text
 st.markdown("""
 <div class="footer">
-  <div class="brand">SHORTHAND STUDIOS</div>
+  <div class="brand" style="color: #FFFFFF;">SHORTHAND STUDIOS</div>
   <div style="font-size: 18px; color: #FFFFFF;">Content Intelligence Platform</div>
   
   <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #444;">
-    <div style="font-size: 14px; color: #CCCCCC; margin-bottom: 1rem;">
-      <strong>Legal</strong><br>
-      View our Privacy Policy for information about data usage and YouTube API Services compliance.
+    <div style="font-size: 14px; color: #FFFFFF; margin-bottom: 1rem;">
+      <strong style="color: #FFFFFF;">Legal</strong><br>
+      <span style="color: #FFFFFF;">View our Privacy Policy for information about data usage and YouTube API Services compliance.</span>
     </div>
   </div>
   
   <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #444;">
     <div style="font-size: 12px; color: #FFFFFF;">
-      <strong>Contact Information</strong><br>
-      Email: access@shorthandstudios.com<br>
-      Underscore Venture One LLC<br>
-      8383 Wilshire Blvd, Beverly Hills, CA 90211
+      <strong style="color: #FFFFFF;">Contact Information</strong><br>
+      <span style="color: #FFFFFF;">Email: access@shorthandstudios.com</span><br>
+      <span style="color: #FFFFFF;">Underscore Venture One LLC</span><br>
+      <span style="color: #FFFFFF;">8383 Wilshire Blvd, Beverly Hills, CA 90211</span>
     </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Add the actual clickable button below the footer
-if st.button("Privacy Policy", key="footer_privacy_link", help="View our Privacy Policy"):
+# Clickable text link for Privacy Policy
+if st.button("📜 Privacy Policy", key="privacy_link", help="View our Privacy Policy and Terms", use_container_width=False):
     st.session_state.current_page = "Privacy Policy"
     st.rerun()
 
-# Hidden button to trigger privacy policy page
-if st.button("Privacy Policy", key="privacy-trigger", type="secondary", disabled=False, use_container_width=False):
+    # Temporary debug info
+st.write(f"Current page: {st.session_state.get('current_page', 'Not set')}")
+
+# Privacy Policy button
+if st.button("📜 Privacy Policy", key="privacy_link"):
     st.session_state.current_page = "Privacy Policy"
+    st.success("Button clicked! Navigating to Privacy Policy...")  # Debug message
     st.rerun()
