@@ -8,6 +8,31 @@ import os
 import feedparser
 import random
 
+# ============ DATA CACHING HELPERS ============
+def cache_with_expiry(key, data, hours=24):
+    """Cache data with expiration timestamp"""
+    st.session_state[key] = {
+        'data': data,
+        'cached_at': datetime.now(),
+        'expires_at': datetime.now() + timedelta(hours=hours)
+    }
+
+def get_cached_data(key):
+    """Get cached data if not expired"""
+    if key in st.session_state:
+        cache = st.session_state[key]
+        if isinstance(cache, dict) and 'expires_at' in cache:
+            if datetime.now() < cache['expires_at']:
+                return cache['data']
+            else:
+                del st.session_state[key]
+    return None
+
+# Initialize session state only
+if "current_platform" not in st.session_state:
+    st.session_state.current_platform = "Home"
+
+
 # Initialize session state only
 if "current_platform" not in st.session_state:
     st.session_state.current_platform = "Home"
@@ -524,18 +549,18 @@ if main_section == "Research":
     </p>
     """, unsafe_allow_html=True)
     
-    research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Court Documents"]  # ADD "Court Documents" here
+    research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Court Documents"]
     
     # Ensure current_page is valid for Research section
-    if st.session_state.current_page not in research_pages:
+    if st.session_state.current_page not in research_pages and st.session_state.current_page != "Privacy Policy":
         st.session_state.current_page = "Case Search"
     
     selected_page = st.sidebar.radio(
-        "",  # Empty label since we're using custom markdown
+        "",
         research_pages,
         key="research_nav",
-        index=research_pages.index(st.session_state.current_page),
-        label_visibility="collapsed"  # Hide the empty label
+        index=research_pages.index(st.session_state.current_page) if st.session_state.current_page in research_pages else 0,
+        label_visibility="collapsed"
     )
     st.session_state.current_page = selected_page
     
@@ -549,17 +574,29 @@ else:  # PRODUCTION
     production_pages = ["Saved Ideas", "Script Builder", "Episode Calendar"]
     
     # Ensure current_page is valid for Production section
-    if st.session_state.current_page not in production_pages:
+    if st.session_state.current_page not in production_pages and st.session_state.current_page != "Privacy Policy":
         st.session_state.current_page = "Saved Ideas"
     
     selected_page = st.sidebar.radio(
-        "",  # Empty label since we're using custom markdown
+        "",
         production_pages,
         key="production_nav",
-        index=production_pages.index(st.session_state.current_page),
-        label_visibility="collapsed"  # Hide the empty label
+        index=production_pages.index(st.session_state.current_page) if st.session_state.current_page in production_pages else 0,
+        label_visibility="collapsed"
     )
     st.session_state.current_page = selected_page
+
+# Add Privacy Policy link at the bottom - always visible
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<p style="font-family: 'Inter', sans-serif; font-size: 12px; color: #999; margin-bottom: 0.5rem;">
+LEGAL
+</p>
+""", unsafe_allow_html=True)
+
+if st.sidebar.button("Privacy Policy", key="privacy_policy_nav", use_container_width=True):
+    st.session_state.current_page = "Privacy Policy"
+    st.rerun()
 
 st.sidebar.markdown("---")
 
@@ -3867,18 +3904,20 @@ if st.session_state.current_page == "Case Search":
             # Store all results in session state
             st.session_state.search_performed = True
             st.session_state.search_query = case_search
-            st.session_state.wikidata_results = wikidata_results
-            st.session_state.gdelt_results = []  # Empty since we removed GDELT
-            st.session_state.nyt_results = []  # Empty since we removed NYT
-            st.session_state.youtube_count = youtube_count
+            cache_with_expiry('wikidata_results', wikidata_results, hours=24)
+            cache_with_expiry('gdelt_results', [], hours=24)
+            cache_with_expiry('nyt_results', [], hours=24)
+            cache_with_expiry('youtube_count', youtube_count, hours=24)
             st.session_state.reddit_results = reddit_results
             st.session_state.web_search_results = web_search_results
     
     # Display results from session state
     if st.session_state.get('search_performed', False):
         case_search = st.session_state.search_query
-        wikidata_results = st.session_state.wikidata_results
-        gdelt_results = st.session_state.gdelt_results
+        wikidata_results = get_cached_data('wikidata_results') or []
+        gdelt_results = get_cached_data('gdelt_results') or []
+        nyt_results = get_cached_data('nyt_results') or []
+        youtube_count = get_cached_data('youtube_count') or 0
         nyt_results = st.session_state.nyt_results
         youtube_count = st.session_state.youtube_count
         st.session_state.wikipedia_data = {'trend_percentage': 0, 'last_7_days': 0}  # Add dummy data
@@ -6190,23 +6229,135 @@ elif st.session_state.current_page == "Episode Calendar":
         else:
             st.info("No data to analyze. Start scheduling episodes!")
 
+elif st.session_state.current_page == "Privacy Policy":
+    st.markdown("""
+    <h1 style="font-family: 'Crimson Text', serif; font-size: 48px; font-weight: 700;">Privacy Policy</h1>
+    <p style="font-size: 14px; color: #666;">Last Updated: December 2024</p>
+    """, unsafe_allow_html=True)
+    
+    # Add the YouTube/Google compliance notice prominently at the top
+    st.info("""
+    **Important Notice:**
+    
+    By using this application, you agree to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms).
+    
+    This application uses YouTube API Services and is subject to the [Google Privacy Policy](http://www.google.com/policies/privacy).
+    """)
+    
+    st.markdown("""
+    ## Bailey's Crime Lab - Privacy Policy
+    
+    This privacy policy explains how Bailey's Crime Lab ("we", "our", "this application") handles information when you use our service.
+    
+    ### YouTube API Services
+    This application uses YouTube API Services. By using this application, you agree to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms).
+    
+    ### Information We Access
+    When you use our application, we access the following information through YouTube API Services:
+    - Public video metadata (titles, descriptions, view counts, publish dates)
+    - Public channel information (channel names, subscriber counts)
+    - Public comment data on videos
+    - Video statistics (likes, comments counts)
+    
+    ### Information Storage
+    - **Session Storage Only**: All data retrieved from YouTube is temporarily stored only in your browser session
+    - **No Persistent Storage**: We do not save any YouTube data to databases or files
+    - **Automatic Deletion**: All cached data is automatically deleted when you close your browser or end your session
+    - **Refresh Policy**: Cached YouTube data expires after 24 hours and is refreshed upon new requests
+    
+    ### Information We Do NOT Collect
+    - We do not collect any personal information
+    - We do not require user accounts or authentication
+    - We do not store YouTube authorization tokens
+    - We do not track individual users across sessions
+    - We do not use cookies for tracking purposes
+    
+    ### How We Use Information
+    The YouTube data we access is used solely to:
+    - Display search results for true crime cases
+    - Show competitor analysis for content creators
+    - Present trending video information
+    - Provide content research tools
+    
+    ### Data Sharing
+    - We do not share any data with third parties
+    - We do not sell, trade, or transfer any information
+    - All data remains within your browser session only
+    
+    ### Third-Party Services
+    This application integrates with:
+    - **YouTube API Services** - Subject to [Google Privacy Policy](http://www.google.com/policies/privacy)
+    - **Reddit API** - For public post data only
+    - **Wikipedia API** - For public article information
+    - **CourtListener** - For public court documents (if configured)
+    
+    ### Browser Technologies
+    This application uses browser session storage to temporarily maintain your search results and preferences during your visit. This data:
+    - Is stored only in your browser's memory
+    - Is never transmitted to our servers
+    - Is automatically deleted when you close the browser tab
+    
+    ### Data Security
+    - All API communications use HTTPS encryption
+    - No sensitive data is collected or stored
+    - Application runs entirely in your browser with no backend data storage
+    
+    ### Children's Privacy
+    This application is not intended for children under 13 years of age. We do not knowingly collect information from children under 13.
+    
+    ### Changes to This Policy
+    We may update this privacy policy from time to time. Changes will be posted on this page with an updated revision date.
+    
+    ### Contact Information
+    For questions about this privacy policy or our practices, contact:
+    
+    **Email**: access@shorthandstudios.com  
+    **Company**: Underscore Venture One LLC  
+    **Address**: 8383 Wilshire Blvd, Beverly Hills, CA 90211
+    
+    ### Your Rights
+    Since we don't collect or store personal data, there is no personal information to access, modify, or delete. Each session starts fresh with no retained information.
+    
+    ### California Privacy Rights
+    California residents have specific rights under CCPA. However, as we do not collect, sell, or store personal information, these rights are preserved by our privacy-by-design approach.
+    
+    ### Compliance
+    This application complies with:
+    - YouTube API Services Terms of Service
+    - Google Privacy Requirements
+    - Applicable data protection regulations
+    """)
+
 # Simple footer with legal compliance text
 st.markdown("""
 <div class="footer">
   <div class="brand">SHORTHAND STUDIOS</div>
   <div style="font-size: 18px; color: #FFFFFF;">Content Intelligence Platform</div>
-  <div style="margin-top: 1rem; font-size: 14px; color: #CCCCCC;">
-    By using this application, you agree to be bound by the YouTube Terms of Service<br>
-    <a href="https://www.youtube.com/t/terms" style="color: #CCCCCC;">https://www.youtube.com/t/terms</a>
+  
+  <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #444;">
+    <div style="font-size: 14px; color: #CCCCCC; margin-bottom: 1rem;">
+      <strong>Legal</strong><br>
+      View our Privacy Policy for information about data usage and YouTube API Services compliance.
+    </div>
   </div>
-  <div style="margin-top: 1rem; font-size: 12px; color: #CCCCCC;">
-    This application uses YouTube API Services and is subject to Google's Privacy Policy<br>
-    <a href="http://www.google.com/policies/privacy" style="color: #CCCCCC;">http://www.google.com/policies/privacy</a>
-  </div>
-  <div style="margin-top: 2rem; font-size: 12px; color: #FFFFFF;">
-    <strong style="color: #FFFFFF;">Contact:</strong> access@shorthandstudios.com<br>
-    <strong style="color: #FFFFFF;">Address:</strong> Underscore Venture One LLC<br>
-    8383 Wilshire Blvd, Beverly Hills, CA 90211
+  
+  <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #444;">
+    <div style="font-size: 12px; color: #FFFFFF;">
+      <strong>Contact Information</strong><br>
+      Email: access@shorthandstudios.com<br>
+      Underscore Venture One LLC<br>
+      8383 Wilshire Blvd, Beverly Hills, CA 90211
+    </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+# Add the actual clickable button below the footer
+if st.button("Privacy Policy", key="footer_privacy_link", help="View our Privacy Policy"):
+    st.session_state.current_page = "Privacy Policy"
+    st.rerun()
+
+# Hidden button to trigger privacy policy page
+if st.button("Privacy Policy", key="privacy-trigger", type="secondary", disabled=False, use_container_width=False):
+    st.session_state.current_page = "Privacy Policy"
+    st.rerun()
