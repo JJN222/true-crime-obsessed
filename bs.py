@@ -674,6 +674,10 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+if st.button("Privacy Policy", key="top_privacy_link"):
+    st.session_state.current_page = "Privacy Policy"
+    st.rerun()
+
 # Initialize session state
 if 'saved_posts' not in st.session_state:
   st.session_state.saved_posts = []
