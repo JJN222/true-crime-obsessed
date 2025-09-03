@@ -6341,16 +6341,10 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Clickable text link for Privacy Policy
-if st.button("📜 Privacy Policy", key="privacy_link", help="View our Privacy Policy and Terms", use_container_width=False):
+# Privacy Policy button
+if st.button("Privacy Policy", key="privacy_link"):
     st.session_state.current_page = "Privacy Policy"
     st.rerun()
 
     # Temporary debug info
 st.write(f"Current page: {st.session_state.get('current_page', 'Not set')}")
-
-# Privacy Policy button
-if st.button("📜 Privacy Policy", key="privacy_link"):
-    st.session_state.current_page = "Privacy Policy"
-    st.success("Button clicked! Navigating to Privacy Policy...")  # Debug message
-    st.rerun()
