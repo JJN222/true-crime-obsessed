@@ -155,8 +155,8 @@ body {
             
 /* Section headings */
 h1, h2, h3 {
-  font-family: 'Crimson Text', serif;
-  font-weight: 700;
+  font-family: 'Special Elite', monospace;
+  font-weight: 400;
   text-transform: uppercase;
   color: var(--primary-text);
   letter-spacing: -1px;
@@ -479,8 +479,7 @@ if not st.session_state.authenticated:
     with col2:
         st.markdown("""
         <div class="login-container">
-            <h1 class="bailey-text">TRUE CRIME'S</h1>
-            <h1 class="crime-lab-text">LAB</h1>
+            <h1 class="bailey-text">TRUE CRIME LAB</h1>
         </div>
         """, unsafe_allow_html=True)
         
@@ -521,7 +520,7 @@ if 'current_page' not in st.session_state:
 
 # Direct navigation to tools
 st.sidebar.markdown("""
-<p style="font-family: 'Crimson Text', serif; font-size: 30px; font-weight: 600; color: #FFFFFF; margin-bottom: 0.5rem;">
+<p style="font-family: 'Special Elite', monospace; font-size: 30px; font-weight: 600; color: #FFFFFF; margin-bottom: 0.5rem;">
 TOOLS
 </p>
 """, unsafe_allow_html=True)
