@@ -2745,9 +2745,10 @@ if st.session_state.current_page == "Case Search":
                     
                     # Build wiki context from wikidata results
                     wiki_context = ""
-                    if 'wikidata_results' in st.session_state and st.session_state.wikidata_results:
-                        wiki_entries = [f"- {r['label']}: {r['description']}" for r in st.session_state.wikidata_results[:3]]
-                        wiki_context = "Wikipedia/Wikidata entries found:\n" + "\n".join(wiki_entries) + "\n"
+                    wikidata_results = get_cached_data('wikidata_results') or []
+                    if wikidata_results:
+                        wiki_entries = [f"- {r['label']}: {r['description']}" for r in wikidata_results[:3]]
+
                     
                     # Build Reddit context
                     reddit_context = ""
