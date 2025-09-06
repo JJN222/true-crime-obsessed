@@ -2287,12 +2287,21 @@ if st.session_state.current_page == "Case Search":
         gdelt_results = get_cached_data('gdelt_results') or []
         nyt_results = get_cached_data('nyt_results') or []
         youtube_count = get_cached_data('youtube_count') or 0
-        nyt_results = st.session_state.nyt_results
-        youtube_count = st.session_state.youtube_count
+        
+        # Safety check to ensure youtube_count is always an integer
+        if isinstance(youtube_count, dict):
+            youtube_count = 0
+        elif youtube_count is None:
+            youtube_count = 0
+        elif not isinstance(youtube_count, (int, float)):
+            youtube_count = 0
+        else:
+            youtube_count = int(youtube_count)
+        
         st.session_state.wikipedia_data = {'trend_percentage': 0, 'last_7_days': 0}  # Add dummy data
         wikipedia_data = st.session_state.wikipedia_data
         reddit_results = st.session_state.reddit_results
-        web_search_results = st.session_state.get('web_search_results', None) 
+        web_search_results = st.session_state.get('web_search_results', None)
 
         # After displaying search results, add this:
         if st.session_state.get('search_performed', False):
