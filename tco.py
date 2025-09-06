@@ -2109,6 +2109,16 @@ if st.session_state.current_page == "Case Search":
             progress_bar.progress(25)
             youtube_count = count_youtube_videos(case_search, youtube_api_key) if youtube_api_key else 0
             
+            # Safety check to ensure youtube_count is always an integer
+            if isinstance(youtube_count, dict):
+                youtube_count = 0
+            elif youtube_count is None:
+                youtube_count = 0
+            elif not isinstance(youtube_count, (int, float)):
+                youtube_count = 0
+            else:
+                youtube_count = int(youtube_count)
+
             status_text.text("Analyzing case...")
             progress_bar.progress(40)
             # Use Perplexity for comprehensive case research
