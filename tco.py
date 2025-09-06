@@ -410,14 +410,9 @@ def get_api_keys():
 # Get API keys from environment variables
 api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key, courtlistener_token = get_api_keys()
 
-# Hardcode Bailey Sarian as the creator
-creator_name = "Bailey Sarian"
+# Hardcode TCO as the creator
+creator_name = "True Crime Obsessed Podcast"
 
-# Get API keys from environment variables
-api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, gemini_api_key, serper_api_key, perplexity_api_key, courtlistener_token = get_api_keys()
-
-# Hardcode Bailey Sarian as the creator
-creator_name = "Bailey Sarian"
 
 # ============ ADD LOGIN PAGE HERE ============
 
@@ -484,9 +479,8 @@ if not st.session_state.authenticated:
     with col2:
         st.markdown("""
         <div class="login-container">
-            <p class="cursive-text">You are about to enter</p>
-            <h1 class="bailey-text">BAILEY SARIAN'S</h1>
-            <h1 class="crime-lab-text">CRIME LAB</h1>
+            <h1 class="bailey-text">TRUE CRIME'S</h1>
+            <h1 class="crime-lab-text">LAB</h1>
         </div>
         """, unsafe_allow_html=True)
         
@@ -503,9 +497,9 @@ if not st.session_state.authenticated:
         col_a, col_b, col_c = st.columns([1, 1, 1])
         with col_b:
             if st.button("ENTER", type="primary", use_container_width=True):
-                if password == "baileysarian":
+                if password == "truecrimeobsessed":  # Replace with your desired password
                     st.session_state.authenticated = True
-                    st.success("Access granted! Welcome to Bailey's Crime Lab")
+                    st.success("Access granted! Welcome to True Crime Obsessed")
                     st.rerun()
                 else:
                     st.error("Incorrect password. Please try again.")
@@ -525,122 +519,37 @@ if not st.session_state.authenticated:
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "Case Search"  # Default page
 
-# Main navigation selection
-main_section = st.sidebar.radio(
+# Direct navigation to tools
+st.sidebar.markdown("""
+<p style="font-family: 'Crimson Text', serif; font-size: 30px; font-weight: 600; color: #FFFFFF; margin-bottom: 0.5rem;">
+TOOLS
+</p>
+""", unsafe_allow_html=True)
+
+research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Court Documents"]
+
+# Ensure current_page is valid
+if st.session_state.current_page not in research_pages and st.session_state.current_page != "Privacy Policy":
+    st.session_state.current_page = "Case Search"
+
+selected_page = st.sidebar.radio(
     "",
-    ["Research"],  # Only Research now
+    research_pages,
     key="main_nav",
+    index=research_pages.index(st.session_state.current_page) if st.session_state.current_page in research_pages else 0,
     label_visibility="collapsed"
 )
-
-st.sidebar.markdown("---")
-
-# Sub-navigation based on main selection
-if main_section == "Research":
-    st.sidebar.markdown("""
-    <p style="font-family: 'Crimson Text', serif; font-size: 30px; font-weight: 600; color: #FFFFFF; margin-bottom: 0.5rem;">
-    TOOLS
-    </p>
-    """, unsafe_allow_html=True)
-    
-    research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Court Documents"]
-    
-    # Ensure current_page is valid for Research section
-    if st.session_state.current_page not in research_pages and st.session_state.current_page != "Privacy Policy":
-        st.session_state.current_page = "Case Search"
-    
-    selected_page = st.sidebar.radio(
-        "",
-        research_pages,
-        key="research_nav",
-        index=research_pages.index(st.session_state.current_page) if st.session_state.current_page in research_pages else 0,
-        label_visibility="collapsed"
-    )
-    st.session_state.current_page = selected_page
-    
+st.session_state.current_page = selected_page
 
 st.sidebar.markdown("---")
 
 # ============ MAIN CONTENT ============
 
-def get_relevant_subreddits_for_creator(creator_name, api_key):
-    """Use AI to find 12 most relevant subreddits for a creator"""
-    if not api_key:
-        return None
-    
-    prompt = f"""Analyze the creator "{creator_name}" and suggest the 12 most relevant subreddits for their content.
-
-Focus on:
-1. Subreddits that match their content niche/topic
-2. Communities with good audience size (avoid tiny subreddits with <10k members)
-3. Active communities where their content would be relevant
-4. Mix of primary niche + related/crossover communities
-5. Use actual existing subreddit names (check they exist)
-
-For example, if analyzing "Bailey Sarian":
-- Primary niche: TrueCrime, serialkillers, UnresolvedMysteries
-- Beauty crossover: MakeupAddiction, beauty, SkinCareAddiction  
-- Storytelling: nosleep, LetsNotMeet, creepy
-- General: AskReddit, todayilearned, videos
-
-Return ONLY a Python list of subreddit names (without r/ prefix), exactly like this format:
-["TrueCrime", "serialkillers", "UnresolvedMysteries", "MakeupAddiction", "beauty", "nosleep", "LetsNotMeet", "creepy", "AskReddit", "todayilearned", "videos", "entertainment"]
-
-Creator: {creator_name}"""
-
-    try:
-        import openai
-        openai.api_key = api_key
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=300,
-            timeout=30
-        )
-        
-        # Parse the AI response to extract the list
-        response_text = response.choices[0].message.content.strip()
-        
-        # Try to extract the list from the response
-        import ast
-        try:
-            # Look for a list in the response
-            start = response_text.find('[')
-            end = response_text.find(']') + 1
-            if start != -1 and end != 0:
-                list_text = response_text[start:end]
-                subreddits = ast.literal_eval(list_text)
-                if isinstance(subreddits, list) and len(subreddits) <= 12:
-                    return subreddits[:12]  # Ensure max 12
-        except:
-            pass
-            
-        # Fallback: extract subreddit names manually using regex
-        import re
-        subreddits = re.findall(r'"([^"]+)"', response_text)
-        if subreddits:
-            return subreddits[:12]
-        
-        # Final fallback: try to extract words that look like subreddit names
-        words = response_text.replace('[', '').replace(']', '').replace('"', '').split(',')
-        clean_subreddits = []
-        for word in words:
-            clean_word = word.strip()
-            if clean_word and len(clean_word) > 2 and len(clean_word) < 25:
-                clean_subreddits.append(clean_word)
-        
-        return clean_subreddits[:12] if clean_subreddits else None
-            
-    except Exception as e:
-        st.error(f"Error getting relevant subreddits: {str(e)}")
-        return None
-
 # Simple header for the True Crime Research Hub
 st.markdown("""
 <div style="padding: 2rem 0 1rem 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 2rem;">
     <h1 style="font-family: 'Crimson Text', serif; font-size: 60px; font-weight: 700; margin: 0; text-transform: none;">
-        BAILEY'S <span style="color: #DC143C;">CRIME LAB</span>
+        TRUE CRIME <span style="color: #DC143C;">OBSESSED</span>
     </h1>
     <p style="font-size: 18px; color: #666; margin-top: 0.5rem;">Research cases, uncover trends, and create killer content</p>
 </div>
@@ -661,66 +570,6 @@ HEADERS = {
 }
 
 # ============ REDDIT FUNCTIONS ============
-
-def save_post(post_data, analysis, creator_name, subreddit):
-  """Save a post with its analysis for show planning"""
-  saved_post = {
-    'id': f"{post_data['id']}_{creator_name}",
-    'title': post_data['title'],
-    'score': post_data['score'],
-    'num_comments': post_data['num_comments'],
-    'subreddit': subreddit,
-    'creator': creator_name,
-    'analysis': analysis,
-    'permalink': post_data['permalink'],
-    'saved_at': datetime.now().strftime("%Y-%m-%d %H:%M"),
-    'image_url': post_data.get('image_url', ''),
-    'content': post_data.get('selftext', '')[:200] + '...' if post_data.get('selftext') else ''
-  }
-  
-  existing_ids = [p['id'] for p in st.session_state.saved_posts]
-  if saved_post['id'] not in existing_ids:
-    st.session_state.saved_posts.append(saved_post)
-    return True
-  return False
-
-def get_reddit_posts(subreddit, category="hot", limit=5):
-  """Get posts from specified subreddit and category"""
-  urls_to_try = [
-    f"https://www.reddit.com/r/{subreddit}/{category}.json",  # Removed ?limit from URL
-    f"https://old.reddit.com/r/{subreddit}/{category}.json",
-    f"https://np.reddit.com/r/{subreddit}/{category}.json",
-  ]
-  
-  headers_variants = [
-    {
-      'User-Agent': 'web:shorthand-reddit-analyzer:v1.0.0 (by /u/Ruhtorikal)',
-      'Accept': 'application/json',
-    },
-    {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Accept': 'application/json',
-    }
-  ]
-  
-  for url in urls_to_try:
-    for headers in headers_variants:
-      try:
-        time.sleep(2)
-        params = {'limit': limit, 'raw_json': 1}
-        response = requests.get(url, headers=headers, params=params, timeout=15)
-        
-        if response.status_code == 200:
-          data = response.json()
-          if 'data' in data and 'children' in data['data'] and data['data']['children']:
-            return data['data']['children'][:limit]  # Force slice to limit
-        elif response.status_code == 429:
-          time.sleep(5)
-          continue
-      except:
-        continue
-  
-  return []
 
 def get_top_comments(subreddit, post_id, limit=3):
   """Get top comments for a specific post"""
@@ -1073,22 +922,6 @@ def search_reddit_by_keywords(query, subreddits, limit=5):
   all_results.sort(key=lambda x: x['data']['score'], reverse=True)
   return all_results[:limit * 3]
 
-def calculate_trending_score(upvotes, comments, created_utc):
-  """Calculate a trending score based on upvotes, comments, and recency"""
-  # Convert created_utc to hours ago
-  hours_ago = (datetime.now() - datetime.fromtimestamp(created_utc)).total_seconds() / 3600
-  
-  # Prevent division by zero and give recent posts a boost
-  time_factor = 1 / (hours_ago + 2) # +2 to prevent extreme values for very new posts
-  
-  # Engagement score
-  engagement = upvotes + (comments * 2) # Comments weighted more heavily
-  
-  # Calculate trending score
-  trending_score = engagement * time_factor
-  
-  return int(trending_score)
-
 # ============ TRUE CRIME RESEARCH API FUNCTIONS ============
 
 def search_wikidata(query, limit=25):
@@ -1368,340 +1201,8 @@ Important: Base your analysis on {creator_name}'s actual known personality, poli
   except Exception as e:
     return f"AI Analysis Error: {str(e)}"
 
-def generate_hashtags(title, subreddit, creator_name):
-  """Generate relevant hashtags for social media"""
-  # Clean creator name for hashtag
-  creator_tag = creator_name.replace(" ", "")
-  
-  # Extract key words from title (simple approach)
-  words = title.lower().split()
-  stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'is', 'are', 'was', 'were'}
-  key_words = [w for w in words if w not in stop_words and len(w) > 3][:3]
-  
-  hashtags = [
-    f"#{creator_tag}",
-    f"#{subreddit}",
-    "#reaction",
-    "#commentary"
-  ]
-  
-  for word in key_words:
-    hashtags.append(f"#{word}")
-  
-  return " ".join(hashtags[:8]) # Limit to 8 hashtags
-
-def display_posts(posts, subreddit, api_key=None, creator_name="Bailey Sarian"):
-  """Display posts with analysis"""
-  if not posts:
-    st.warning("⚠️ No posts found. Try a different subreddit.")
-    return
-  
-  for i, post in enumerate(posts):
-    post_data = post['data']
-    title = post_data.get('title', 'No title')
-    score = post_data.get('score', 0)
-    num_comments = post_data.get('num_comments', 0)
-    author = post_data.get('author', '[deleted]')
-    created = datetime.fromtimestamp(post_data.get('created_utc', 0))
-    permalink = post_data.get('permalink', '')
-    post_id = post_data.get('id', '')
-    selftext = post_data.get('selftext', '')
-    url = post_data.get('url', '')
-    
-    # Check if this is an image post
-    image_url = None
-    is_image = False
-    if url and any(url.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
-      image_url = url
-      is_image = True
-    elif 'preview' in post_data and post_data['preview'] is not None and 'images' in post_data['preview']:
-      try:
-        image_url = post_data['preview']['images'][0]['source']['url'].replace('&amp;', '&')
-        is_image = True
-      except:
-        pass
-    
-    post_data['image_url'] = image_url
-    
-    with st.expander(f"{i+1:02d} | {title[:80]}{'...' if len(title) > 80 else ''}", expanded=False):
-      # Clean metrics display
-      st.markdown(f"""
-      <div style="display: flex; gap: 3rem; margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
-        <div style="text-align: center;">
-          <p style="font-size: 32px; font-weight: 800; color: #DC143C; margin: 0;">{score:,}</p>
-          <p style="font-size: 14px; text-transform: uppercase; color: #666;">Upvotes</p>
-        </div>
-        <div style="text-align: center;">
-          <p style="font-size: 32px; font-weight: 800; color: #DC143C; margin: 0;">{num_comments:,}</p>
-          <p style="font-size: 14px; text-transform: uppercase; color: #666;">Comments</p>
-        </div>
-        <div style="text-align: center;">
-          <p style="font-size: 32px; font-weight: 800; color: #DC143C; margin: 0;">{int((datetime.now() - created).total_seconds() / 3600)}</p>
-          <p style="font-size: 14px; text-transform: uppercase; color: #666;">Hours Ago</p>
-        </div>
-      </div>
-      """, unsafe_allow_html=True)
-
-      
-      st.write(f"**Author:** u/{author}")
-      
-      # Display content based on type
-      if is_image and image_url:
-        st.write("**Image Post:**")
-        st.image(image_url, width=400)
-      elif selftext and len(selftext) > 50:
-        st.write("**Post Content:**")
-        st.write(selftext[:400] + "..." if len(selftext) > 400 else selftext)
-      elif url and url != f"https://www.reddit.com{permalink}":
-        st.write(f"**Link:** {url}")
-      
-      # Get comments
-      with st.spinner("Fetching comments..."):
-        comments = get_top_comments(subreddit, post_id, 3)
-      
-      if comments:
-        st.write("**Top Comments:**")
-        for j, comment in enumerate(comments, 1):
-          st.write(f"{j}. **{comment['author']}** ({comment['score']} points):")
-          st.write(f"  {comment['body'][:200]}{'...' if len(comment['body']) > 200 else ''}")
-      
-      # AI Analysis
-      if api_key:
-        with st.spinner("🤖 AI analyzing content..."):
-          analysis = analyze_with_ai(title, selftext, comments, api_key, creator_name, image_url if is_image else None)
-        
-        if analysis and not analysis.startswith("AI Analysis Error"):
-          st.markdown('<div class="ai-analysis">', unsafe_allow_html=True)
-          st.markdown("""
-          <h3 style="font-size: 24px; font-weight: 800; text-transform: uppercase; margin-bottom: 1.5rem;">
-            AI Analysis <span style="color: #DC143C;">Results</span>
-          </h3>
-          """, unsafe_allow_html=True)
-          
-          if is_image:
-            st.info("Image analysis included")
-          
-          st.write(analysis)
-
-          # Add hashtags
-          hashtags = generate_hashtags(title, subreddit, creator_name)
-          st.markdown(f"**Suggested Hashtags:** `{hashtags}`")
-          
-          # Export button - LEFT ALIGNED
-          trending = calculate_trending_score(score, num_comments, post_data.get('created_utc', 0))
-          export_data = f"""# {creator_name} Analysis for Reddit Post
-
-**Post:** {title}
-**Subreddit:** r/{subreddit}
-**Score:** {score:,} upvotes
-**Comments:** {num_comments:,}
-**Trending Score:** {trending:,}
-**Author:** u/{author}
-**Reddit Link:** https://reddit.com{permalink}
-**Hashtags:** {hashtags}
-
-## AI Analysis:
-{analysis}
-
-## Post Content:
-{selftext[:500] if selftext else 'No text content'}
-
-Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}
-"""
-
-          # Add to session state for batch export
-          if 'analyzed_posts' not in st.session_state:
-            st.session_state.analyzed_posts = []
-          if export_data not in st.session_state.analyzed_posts:
-            st.session_state.analyzed_posts.append(export_data)
-          
-          st.download_button(
-            label="📄 Export Analysis",
-            data=export_data,
-            file_name=f"{creator_name.replace(' ', '_')}_{title[:30].replace(' ', '_')}_analysis.txt",
-            mime="text/plain",
-            key=f"export_{post_id}_{i}",
-            help="Download this analysis as a text file"
-          )
-
-          st.markdown('</div>', unsafe_allow_html=True)
-        elif analysis:
-          st.error(analysis)
-      else:
-        st.markdown('<div class="ai-analysis">', unsafe_allow_html=True)
-        st.markdown("""
-        <h3 style="font-size: 24px; font-weight: 800; text-transform: uppercase; margin-bottom: 1.5rem;">
-          AI Analysis <span style="color: #DC143C;">Results</span>
-        </h3>
-        """, unsafe_allow_html=True)
-        st.markdown(f"### 🤖 AI Analysis for {creator_name}")
-        st.info("⚠️ AI analysis unavailable - configure API keys in environment variables")
-        st.markdown('</div>', unsafe_allow_html=True)
-      
-      st.write(f"[View on Reddit](https://reddit.com{permalink})")
-
 # ============ YOUTUBE API FUNCTIONS ============
-
-def get_youtube_trending(api_key=None, region='US', max_results=15):
-  """Get trending videos from YouTube"""
-  if not api_key:
-    # Return sample trending topics without API
-    sample_trending = [
-      {
-        "title": "BREAKING: Major Political Development Shakes Washington", 
-        "channel": "Political News Network", 
-        "views": "2.3M views", 
-        "published": "2 hours ago", 
-        "description": "Latest updates on the developing political situation that could change everything...",
-        "video_id": "sample1",
-        "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
-      },
-      {
-        "title": "SHOCKING Truth About Latest Government Scandal EXPOSED", 
-        "channel": "Truth Commentary", 
-        "views": "1.8M views", 
-        "published": "4 hours ago", 
-        "description": "Deep dive investigation reveals concerning details about recent government actions...",
-        "video_id": "sample2",
-        "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
-      },
-      {
-        "title": "This Changes EVERYTHING - Full Analysis & Breakdown", 
-        "channel": "Conservative Analysis", 
-        "views": "956K views", 
-        "published": "1 day ago", 
-        "description": "Complete breakdown of recent events and their long-term implications...",
-        "video_id": "sample3",
-        "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
-      }
-    ]
-    st.info("Showing sample trending videos (Configure YouTube API key for live data)")
-    return sample_trending
   
-  try:
-    # YouTube API v3 trending videos endpoint
-    url = "https://www.googleapis.com/youtube/v3/videos"
-    params = {
-      'part': 'snippet,statistics',
-      'chart': 'mostPopular',
-      'regionCode': region,
-      'maxResults': max_results,
-      'key': api_key,
-      'videoCategoryId': '25' # News & Politics category
-    }
-    
-    response = requests.get(url, params=params, timeout=15)
-    
-    if response.status_code == 200:
-      data = response.json()
-      trending_videos = []
-      
-      for item in data.get('items', []):
-        snippet = item.get('snippet', {})
-        stats = item.get('statistics', {})
-        
-        video_data = {
-          'title': snippet.get('title', 'No title'),
-          'channel': snippet.get('channelTitle', 'Unknown Channel'),
-          'views': f"{int(stats.get('viewCount', 0)):,} views" if stats.get('viewCount') else 'No views',
-          'published': snippet.get('publishedAt', 'Unknown'),
-          'video_id': item.get('id', ''),
-          'description': snippet.get('description', '')[:200] + '...' if snippet.get('description') else '',
-          'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
-        }
-        trending_videos.append(video_data)
-      
-      st.success("✅ Retrieved live YouTube trending data")
-      return trending_videos
-    elif response.status_code == 403:
-      st.warning("⚠️ YouTube API key invalid or quota exceeded. Showing sample data.")
-      return get_youtube_trending()
-    elif response.status_code == 400:
-      st.warning("⚠️ YouTube API request error. Check your API key permissions.")
-      return get_youtube_trending()
-    else:
-      st.warning(f"⚠️ YouTube API error {response.status_code}. Using sample data.")
-      return get_youtube_trending()
-      
-  except Exception as e:
-    st.warning(f"⚠️ YouTube API temporarily unavailable: {str(e)[:50]}... Using sample data.")
-    return get_youtube_trending()
-  
-def get_relevant_channels_for_creator(creator_name, api_key):
-    """Use AI to find 5 most relevant YouTube channels for a creator"""
-    if not api_key:
-        return None
-    
-    prompt = f"""Analyze the creator "{creator_name}" and suggest 5 YouTube channels that are most relevant/similar to their content.
-
-Focus on:
-1. Channels that create similar content types
-2. Channels in the same niche or related niches
-3. Channels with good audience overlap
-4. Popular channels that the creator's audience would also watch
-5. Use actual existing YouTube channel names
-
-For example, if analyzing "Bailey Sarian":
-- Similar true crime: Kendall Rae, Eleanor Neale, Stephanie Harlowe
-- Beauty crossover: James Charles, Jeffree Star
-- Storytelling: MrBallen, That Chapter
-
-Return ONLY a Python list of YouTube channel names, exactly like this format:
-["Kendall Rae", "Eleanor Neale", "Stephanie Harlowe", "MrBallen", "That Chapter"]
-
-Make sure these are real, active YouTube channels. Do not include the original creator in the list.
-
-Creator: {creator_name}"""
-
-    try:
-        import openai
-        openai.api_key = api_key
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            timeout=30
-        )
-        
-        # Parse the AI response to extract the list
-        response_text = response.choices[0].message.content.strip()
-        
-        # Try to extract the list from the response
-        import ast
-        try:
-            # Look for a list in the response
-            start = response_text.find('[')
-            end = response_text.find(']') + 1
-            if start != -1 and end != 0:
-                list_text = response_text[start:end]
-                channels = ast.literal_eval(list_text)
-                if isinstance(channels, list) and len(channels) <= 5:
-                    return channels[:5]  # Ensure max 5
-        except:
-            pass
-            
-        # Fallback: extract channel names manually using regex
-        import re
-        channels = re.findall(r'"([^"]+)"', response_text)
-        if channels:
-            return channels[:5]
-        
-        # Final fallback: try to extract words that look like channel names
-        words = response_text.replace('[', '').replace(']', '').replace('"', '').split(',')
-        clean_channels = []
-        for word in words:
-            clean_word = word.strip()
-            if clean_word and len(clean_word) > 2 and len(clean_word) < 30:
-                clean_channels.append(clean_word)
-        
-        return clean_channels[:5] if clean_channels else None
-            
-    except Exception as e:
-        st.error(f"Error getting relevant channels: {str(e)}")
-        return None
-
-
 def search_youtube_videos(query, api_key=None, max_results=10, timeframe="week", search_type="video"):
   """Search YouTube for videos by topic/keywords with timeframe, or search by channel"""
   if not api_key:
@@ -1943,76 +1444,6 @@ def format_youtube_date(date_string):
     except:
         return date_string
 
-def get_youtube_comments(video_id, api_key=None, max_results=20):
-  """Get comments from a YouTube video"""
-  if not api_key:
-    # Return sample comments
-    sample_comments = [
-      {"author": "TruthSeeker2024", "text": "This is exactly what I've been saying! Finally someone gets it.", "likes": 127},
-      {"author": "SkepticalViewer", "text": "I disagree with this take. Here's why this analysis is flawed...", "likes": 89},
-      {"author": "CasualObserver", "text": "Great breakdown! Really helps me understand the situation better.", "likes": 45},
-      {"author": "ControversialTakes", "text": "This is going to trigger so many people but it's the truth", "likes": 203},
-      {"author": "ThoughtfulCritic", "text": "While I appreciate the perspective, I think there are some nuances missing here", "likes": 67}
-    ]
-    st.info("Showing sample comments (Configure YouTube API key for live comment data)")
-    return sample_comments
-  
-  try:
-    url = "https://www.googleapis.com/youtube/v3/commentThreads"
-    params = {
-      'part': 'snippet',
-      'videoId': video_id,
-      'maxResults': max_results,
-      'order': 'relevance',
-      'key': api_key
-    }
-    
-    response = requests.get(url, params=params, timeout=15)
-    
-    if response.status_code == 200:
-      data = response.json()
-      comments = []
-      
-      for item in data.get('items', []):
-        snippet = item.get('snippet', {}).get('topLevelComment', {}).get('snippet', {})
-        
-        comment_data = {
-          'author': snippet.get('authorDisplayName', 'Unknown'),
-          'text': snippet.get('textDisplay', 'No text'),
-          'likes': int(snippet.get('likeCount', 0))
-        }
-        comments.append(comment_data)
-      
-      st.success(f"✅ Retrieved {len(comments)} live comments")
-      return comments
-    elif response.status_code == 403:
-      st.warning("⚠️ Comments disabled or API quota exceeded. Showing sample comments.")
-      return [
-        {"author": "TruthSeeker2024", "text": "This is exactly what I've been saying! Finally someone gets it.", "likes": 127},
-        {"author": "SkepticalViewer", "text": "I disagree with this take. Here's why this analysis is flawed...", "likes": 89},
-        {"author": "CasualObserver", "text": "Great breakdown! Really helps me understand the situation better.", "likes": 45},
-        {"author": "ControversialTakes", "text": "This is going to trigger so many people but it's the truth", "likes": 203},
-        {"author": "ThoughtfulCritic", "text": "While I appreciate the perspective, I think there are some nuances missing here", "likes": 67}
-      ]
-    else:
-      st.warning(f"⚠️ Comments API error {response.status_code}. Using sample comments.")
-      return [
-        {"author": "TruthSeeker2024", "text": "This is exactly what I've been saying! Finally someone gets it.", "likes": 127},
-        {"author": "SkepticalViewer", "text": "I disagree with this take. Here's why this analysis is flawed...", "likes": 89},
-        {"author": "CasualObserver", "text": "Great breakdown! Really helps me understand the situation better.", "likes": 45},
-        {"author": "ControversialTakes", "text": "This is going to trigger so many people but it's the truth", "likes": 203},
-        {"author": "ThoughtfulCritic", "text": "While I appreciate the perspective, I think there are some nuances missing here", "likes": 67}
-      ]
-      
-  except Exception as e:
-    st.warning(f"⚠️ Comments temporarily unavailable: {str(e)[:50]}... Using sample data.")
-    return [
-      {"author": "TruthSeeker2024", "text": "This is exactly what I've been saying! Finally someone gets it.", "likes": 127},
-      {"author": "SkepticalViewer", "text": "I disagree with this take. Here's why this analysis is flawed...", "likes": 89},
-      {"author": "CasualObserver", "text": "Great breakdown! Really helps me understand the situation better.", "likes": 45},
-      {"author": "ControversialTakes", "text": "This is going to trigger so many people but it's the truth", "likes": 203},
-      {"author": "ThoughtfulCritic", "text": "While I appreciate the perspective, I think there are some nuances missing here", "likes": 67}
-    ]
 def get_video_by_id(video_id, api_key=None):
   """Get a specific YouTube video by ID"""
   if not api_key:
@@ -2046,483 +1477,8 @@ def get_video_by_id(video_id, api_key=None):
         }
   except:
     return None
-
-def analyze_video_for_creator_auto(video, comments, creator_name, api_key):
-    """Auto-analyze video + comments for creator - Reddit style"""
-    if not api_key:
-        return None
-    
-    # Prepare comment text
-    comment_text = ""
-    if comments:
-        top_comments = []
-        for comment in comments[:5]:  # Top 5 comments
-            top_comments.append(f"• {comment['author']}: {comment['text'][:100]}...")
-        comment_text = "\n".join(top_comments)
-    
-    prompt = f"""Analyze this YouTube video for {creator_name}:
-
-Video: "{video['title']}" by {video['channel']} ({video.get('views', 'N/A')})
-
-Top Comments:
-{comment_text}
-
-Brief analysis for {creator_name}:
-
-REACTION ANGLE: How {creator_name} should approach this
-KEY POINTS: 2-3 main points to address
-AUDIENCE SENTIMENT: What viewers are saying
-CONTENT IDEA: Specific video concept for {creator_name}
-
-Keep concise and actionable."""
-
-    try:
-        import openai
-        openai.api_key = api_key
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=400,
-            timeout=30
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"AI Analysis Error: {str(e)}"
-
-def analyze_video_comments_with_ai(comments, video_title, creator_name, api_key):
-  """Analyze YouTube video comments for creator insights"""
-  if not api_key:
-    return None
-  
-  import openai
-  openai.api_key = api_key
-  
-  # Prepare top comments for analysis
-  comment_texts = []
-  for i, comment in enumerate(comments[:10], 1):
-    comment_texts.append(f"{i}. {comment['author']} ({comment['likes']} likes): {comment['text'][:150]}...")
-  
-  comments_text = "\n".join(comment_texts)
-  
-  prompt = f"""Analyze these YouTube video comments for {creator_name}'s content strategy:
-
-Video: "{video_title}"
-Top Comments:
-{comments_text}
-
-Provide analysis for {creator_name}:
-
-AUDIENCE SENTIMENT: Overall mood and feelings in the comments (angry, supportive, confused, etc.)
-CONTROVERSIAL POINTS: What aspects are people most divided on?
-{creator_name.upper()} OPPORTUNITY: How {creator_name} could address these comments or create follow-up content
-COMMENT THEMES: Top 3 recurring themes or talking points in the comments
-AUDIENCE QUESTIONS: What questions are viewers asking that {creator_name} could answer?
-ENGAGEMENT STRATEGY: How {creator_name} could respond to maximize engagement
-CONTENT IDEAS: 2-3 video ideas based on what the audience is discussing
-
-Focus on what the audience is actually saying and how {creator_name} could use these insights."""
-  
-  try:
-    response = openai.ChatCompletion.create(
-      model="gpt-4.1-nano",
-      messages=[{"role": "user", "content": prompt}],
-      max_tokens=800,
-      timeout=30
-    )
-    return response.choices[0].message.content
-  except Exception as e:
-    return f"Comment Analysis Error: {str(e)}"
-
-def analyze_youtube_trends_with_ai(trending_videos, creator_name, api_key):
-  """Analyze YouTube trending videos for content opportunities"""
-  if not api_key:
-    return None
-  
-  import openai
-  openai.api_key = api_key
-  
-  # Prepare trending video data for analysis
-  video_titles = []
-  for i, video in enumerate(trending_videos[:8], 1):
-    video_titles.append(f"{i}. \"{video['title']}\" by {video['channel']} ({video['views']})")
-  
-  videos_text = "\n".join(video_titles)
-  
-  prompt = f"""Analyze these trending YouTube videos for {creator_name}'s content opportunities:
-
-{videos_text}
-
-For the top 3 most relevant trends, provide:
-
-TRENDING VIDEO TOPIC: [Main topic/theme]
-{creator_name.upper()} ANGLE: How {creator_name} could respond, react, or create similar content
-CONTENT IDEA: Specific video title for {creator_name}'s channel
-FORMAT: Best format (Reaction, Analysis, Response, Original Take)
-URGENCY: How time-sensitive this trend is (1-10)
-HOOK: Opening line or angle to grab attention
-SERIES POTENTIAL: Could this become multiple videos?"""
-  
-  try:
-    response = openai.ChatCompletion.create(
-      model="gpt-4.1-nano",
-      messages=[{"role": "user", "content": prompt}],
-      max_tokens=800,
-      timeout=30
-    )
-    return response.choices[0].message.content
-  except Exception as e:
-    return f"AI Analysis Error: {str(e)}"
-  
-def get_youtube_podcast_channels(api_key=None, category="general", max_results=20):
-    """Get popular podcast channels from YouTube"""
-    if not api_key:
-        return None
-    
-    # Define search queries for different podcast categories
-    podcast_queries = {
-        "general": "podcast channel",
-        "true crime": "true crime podcast",
-        "comedy": "comedy podcast",
-        "business": "business podcast",
-        "news": "news podcast daily",
-        "technology": "tech podcast",
-        "health": "health wellness podcast",
-        "sports": "sports podcast",
-        "education": "educational podcast",
-        "music": "music podcast",
-        "politics": "political podcast"
-    }
-    
-    query = podcast_queries.get(category, "podcast channel")
-    
-    try:
-        url = "https://www.googleapis.com/youtube/v3/search"
-        params = {
-            'part': 'snippet',
-            'q': query,
-            'type': 'channel',
-            'order': 'relevance',
-            'maxResults': max_results,
-            'key': api_key
-        }
-        
-        response = requests.get(url, params=params, timeout=15)
-        
-        if response.status_code == 200:
-            data = response.json()
-            channels = []
-            
-            for item in data.get('items', []):
-                snippet = item.get('snippet', {})
-                
-                # Filter to ensure it's actually a podcast
-                title = snippet.get('title', '').lower()
-                description = snippet.get('description', '').lower()
-                
-                if 'podcast' in title or 'podcast' in description or 'show' in title:
-                    channel_data = {
-                        'channel_id': item.get('id', {}).get('channelId', ''),
-                        'title': snippet.get('title', 'Unknown'),
-                        'description': snippet.get('description', '')[:200] + '...',
-                        'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
-                    }
-                    channels.append(channel_data)
-            
-            return channels
-    except:
-        return None
     
 # ============ COURTLISTENER API FUNCTIONS ============
-
-    
-def search_courtlistener_cases(query, api_token, limit=10):
-    """Search CourtListener - optimized for their API structure"""
-    if not api_token:
-        return None
-        
-    headers = {'Authorization': f'Token {api_token}'}
-    
-    results = {
-        'dockets': [],
-        'opinions': [],
-        'total_found': 0
-    }
-    
-    all_opinions = []
-    seen_ids = set()
-    
-    try:
-        # Search the opinions endpoint with basic query
-        # The API searches the full text, not just case names
-        opinions_url = "https://www.courtlistener.com/api/rest/v4/search/"
-        
-        # Try different search strategies
-        search_queries = [
-            query,  # Plain search
-            f'"{query}"',  # Exact phrase
-        ]
-        
-        for search_term in search_queries:
-            params = {
-                'q': search_term,
-                'type': 'o',  # opinions type
-                'order_by': 'score desc',
-                'page_size': 50  # Get more results since we need to filter
-            }
-            
-            response = requests.get(opinions_url, headers=headers, params=params, timeout=15)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # The API returns results differently than expected
-                # Let's check the actual structure
-                if 'results' in data:
-                    for item in data.get('results', []):
-                        # Get all text fields to search
-                        case_name = item.get('caseName', '') or ''
-                        case_name_full = item.get('caseNameFull', '') or ''
-                        snippet = item.get('snippet', '') or ''
-                        text = item.get('text', '') or ''
-                        
-                        # Combine all searchable text
-                        all_text = f"{case_name} {case_name_full} {snippet} {text}".lower()
-                        
-                        # Check if our search query appears anywhere
-                        if query.lower() in all_text:
-                            item_id = item.get('id') or item.get('resource_uri', '').split('/')[-2]
-                            
-                            if item_id and item_id not in seen_ids:
-                                seen_ids.add(item_id)
-                                
-                                # Extract docket number if available
-                                docket_num = ''
-                                if 'docket' in item:
-                                    if isinstance(item['docket'], dict):
-                                        docket_num = item['docket'].get('docket_number', '')
-                                    elif isinstance(item['docket'], str):
-                                        # It might be a URL, extract the docket number
-                                        docket_num = item['docket'].split('/')[-2] if '/' in item['docket'] else ''
-                                
-                                all_opinions.append({
-                                    'case_name': case_name or case_name_full or 'Unknown Case',
-                                    'court': item.get('court', '') or item.get('court_citation_string', ''),
-                                    'date_filed': item.get('dateFiled', '') or item.get('date_filed', ''),
-                                    'docket_number': docket_num,
-                                    'citation': item.get('citation', []),
-                                    'summary': snippet[:500] if snippet else text[:500] if text else '',
-                                    'url': f"https://www.courtlistener.com{item.get('absolute_url', '')}" if item.get('absolute_url') else '',
-                                    'judge': item.get('judge', '') or item.get('panel', ''),
-                                    'status': item.get('status', 'Published')
-                                })
-            
-            # If we found results, stop searching
-            if all_opinions:
-                break
-                
-    except Exception as e:
-        print(f"Search error: {str(e)}")
-    
-    # Also try the dockets endpoint with a simpler search
-    try:
-        dockets_url = "https://www.courtlistener.com/api/rest/v4/dockets/"
-        params = {
-            'q': query,
-            'page_size': 20
-        }
-        
-        response = requests.get(dockets_url, headers=headers, params=params, timeout=15)
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            dockets = []
-            for docket in data.get('results', []):
-                case_name = docket.get('case_name', '')
-                
-                # Only include if the query appears in the case name
-                if query.lower() in case_name.lower():
-                    dockets.append({
-                        'id': docket.get('id'),
-                        'case_name': case_name,
-                        'court': docket.get('court_id', ''),
-                        'docket_number': docket.get('docket_number', ''),
-                        'date_filed': docket.get('date_filed', ''),
-                        'date_terminated': docket.get('date_terminated', ''),
-                        'nature_of_suit': docket.get('nature_of_suit', ''),
-                        'cause': docket.get('cause', ''),
-                        'assigned_to': docket.get('assigned_to_str', ''),
-                        'url': f"https://www.courtlistener.com{docket.get('absolute_url', '')}" if docket.get('absolute_url') else '',
-                        'pacer_case_id': docket.get('pacer_case_id', '')
-                    })
-            
-            results['dockets'] = dockets
-            
-    except Exception as e:
-        print(f"Docket search error: {str(e)}")
-    
-    results['opinions'] = all_opinions
-    results['total_found'] = len(all_opinions) + len(results['dockets'])
-    
-    # If no results, provide helpful message with direct link
-    if not all_opinions and not results['dockets']:
-        results['no_results_message'] = f"""
-No cases found for "{query}" via API.
-
-**This is likely because:**
-- The case title doesn't contain the exact name (e.g., "Associated Press v. Second Judicial District")
-- The case is in state court (not federal)
-- The API search works differently than the website
-
-**Search directly on CourtListener:**
-[Click here to search on their website](https://www.courtlistener.com/?q={query.replace(' ', '+')}&type=o)
-
-The website search is more comprehensive than the API.
-"""
-    
-    return results
-def is_name_match(search_query, case_text):
-    """
-    Smart matching that handles middle names and initials
-    Returns True if the search query matches the case text
-    """
-    search_query = search_query.lower().strip()
-    case_text = case_text.lower()
-    
-    # Split search query into parts
-    search_parts = search_query.split()
-    
-    if len(search_parts) == 2:
-        first_name, last_name = search_parts
-        
-        # Pattern 1: Exact match (Bryan Kohberger in Bryan Kohberger)
-        if search_query in case_text:
-            return True
-        
-        # Pattern 2: With middle initial (Bryan Kohberger matches Bryan C. Kohberger)
-        import re
-        # Look for: first_name [middle_initial]. last_name
-        pattern_with_initial = f"{first_name}\\s+\\w\\.?\\s+{last_name}"
-        if re.search(pattern_with_initial, case_text):
-            return True
-        
-        # Pattern 3: With middle name (Bryan Kohberger matches Bryan Christopher Kohberger)
-        # Look for: first_name [middle_name] last_name
-        pattern_with_middle = f"{first_name}\\s+\\w+\\s+{last_name}"
-        if re.search(pattern_with_middle, case_text):
-            return True
-        
-        # Pattern 4: Both first and last name present, but not necessarily adjacent
-        # (for cases like "Kohberger, Bryan C.")
-        if first_name in case_text and last_name in case_text:
-            # Make sure they're close enough (within 50 characters)
-            first_pos = case_text.find(first_name)
-            last_pos = case_text.find(last_name)
-            if abs(first_pos - last_pos) < 50:
-                return True
-    
-    elif len(search_parts) == 3:
-        # User provided middle name/initial - require exact match
-        if search_query in case_text:
-            return True
-        
-        # Also try without middle (in case court record doesn't have it)
-        first_name = search_parts[0]
-        last_name = search_parts[-1]
-        simple_name = f"{first_name} {last_name}"
-        if simple_name in case_text:
-            return True
-    
-    else:
-        # Single name or more than 3 parts - require exact match
-        if search_query in case_text:
-            return True
-    
-    return False
-
-def get_docket_entries(docket_id, api_token, limit=20):
-    """
-    Get docket entries (individual filings) for a specific case
-    """
-    headers = {
-        'Authorization': f'Token {api_token}'
-    }
-    
-    try:
-        url = f"https://www.courtlistener.com/api/rest/v4/docket-entries/"
-        params = {
-            'docket': docket_id,
-            'order_by': '-date_filed',
-            'page_size': limit,
-            'fields': 'id,date_filed,entry_number,description,recap_documents'  # Exclude plain_text for speed
-        }
-        
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            entries = []
-            
-            for entry in data.get('results', []):
-                entries.append({
-                    'entry_number': entry.get('entry_number', ''),
-                    'date_filed': entry.get('date_filed', ''),
-                    'description': entry.get('description', ''),
-                    'document_count': len(entry.get('recap_documents', []))
-                })
-            
-            return entries
-    except Exception as e:
-        print(f"Error getting docket entries: {e}")
-        return []
-
-def get_case_parties(docket_id, api_token):
-    """
-    Get parties involved in a case (defendants, plaintiffs, etc.)
-    """
-    headers = {
-        'Authorization': f'Token {api_token}'
-    }
-    
-    try:
-        url = f"https://www.courtlistener.com/api/rest/v4/parties/"
-        params = {
-            'docket': docket_id,
-            'filter_nested_results': 'true'
-        }
-        
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            parties = []
-            
-            for party in data.get('results', []):
-                party_info = {
-                    'name': party.get('name', 'Unknown'),
-                    'type': '',
-                    'extra_info': party.get('extra_info', '')
-                }
-                
-                # Get party type from nested data
-                party_types = party.get('party_types', [])
-                if party_types:
-                    party_info['type'] = party_types[0].get('name', '')
-                    
-                    # For criminal cases, get criminal counts
-                    if party_types[0].get('criminal_counts'):
-                        party_info['criminal_counts'] = party_types[0].get('criminal_counts', [])
-                    if party_types[0].get('highest_offense_level_opening'):
-                        party_info['offense_level'] = party_types[0].get('highest_offense_level_opening', '')
-                
-                parties.append(party_info)
-            
-            return parties
-    except Exception as e:
-        print(f"Error getting parties: {e}")
-        return []
-
   
 # ============ SPOTIFY API FUNCTIONS ============
 
@@ -2986,517 +1942,6 @@ def get_tmdb_item_details(api_key, item_id, media_type='movie'):
     except:
         return None
 
-def search_tmdb_multiple_companies(api_key, company_ids, media_type='movie', sort_by='popularity.desc', year=None):
-    """Search TMDb for movies/TV shows from multiple companies (OR logic)"""
-    all_results = []
-    seen_ids = set()  # To avoid duplicates
-    
-    try:
-        # Make separate API calls for each company
-        for company_id in company_ids:
-            url = f"https://api.themoviedb.org/3/discover/{media_type}"
-            params = {
-                'api_key': api_key,
-                'sort_by': sort_by,
-                'page': 1,
-                'vote_count.gte': 50,  # Lower threshold for individual companies
-                'with_companies': company_id
-            }
-            
-            if year:
-                if media_type == 'movie':
-                    params['primary_release_year'] = year
-                else:
-                    params['first_air_date_year'] = year
-            
-            response = requests.get(url, params=params)
-            
-            if response.status_code == 200:
-                data = response.json()
-                for item in data.get('results', []):
-                    item_id = item.get('id')
-                    if item_id not in seen_ids:
-                        seen_ids.add(item_id)
-                        all_results.append(item)
-        
-        # Sort all results by the selected criteria
-        if all_results:
-            if sort_by == 'popularity.desc':
-                all_results.sort(key=lambda x: x.get('popularity', 0), reverse=True)
-            elif sort_by == 'vote_average.desc':
-                all_results.sort(key=lambda x: x.get('vote_average', 0), reverse=True)
-            elif sort_by == 'vote_count.desc':
-                all_results.sort(key=lambda x: x.get('vote_count', 0), reverse=True)
-            elif sort_by == 'release_date.desc' or sort_by == 'first_air_date.desc':
-                date_field = 'release_date' if media_type == 'movie' else 'first_air_date'
-                all_results.sort(key=lambda x: x.get(date_field, ''), reverse=True)
-            elif sort_by == 'revenue.desc':
-                all_results.sort(key=lambda x: x.get('revenue', 0), reverse=True)
-        
-        return {'results': all_results}
-        
-    except Exception as e:
-        st.error(f"TMDb API Error: {str(e)}")
-        return None
-    
-def search_tmdb_companies(api_key, query):
-    """Search for production companies"""
-    try:
-        url = "https://api.themoviedb.org/3/search/company"
-        params = {
-            'api_key': api_key,
-            'query': query
-        }
-        
-        response = requests.get(url, params=params)
-        
-        if response.status_code == 200:
-            return response.json()['results']
-        return []
-    except:
-        return []
-
-def analyze_movie_tv_trend(title, overview, popularity, vote_average, media_type, 
-                          genre_names, creator_name, api_key):
-    """Analyze how a creator should cover a trending movie/TV show"""
-    if not api_key:
-        return None
-    
-    import openai
-    openai.api_key = api_key
-    
-    context = f"""Trending {media_type.upper()}:
-Title: {title}
-Overview: {overview}
-Popularity Score: {popularity}
-Average Rating: {vote_average}/10
-Genres: {', '.join(genre_names)}
-
-This {media_type} is currently trending with high viewership and engagement."""
-    
-    prompt = f"""Analyze this trending {media_type} for {creator_name}'s content strategy:
-
-{context}
-
-Provide a comprehensive content strategy for {creator_name}:
-
-TREND ANALYSIS: Why this {media_type} is trending and what's driving the interest (2-3 sentences)
-
-{creator_name.upper()} ANGLE: How {creator_name} should approach this topic based on their personality and audience
-
-VIDEO CONCEPTS: 3 specific video ideas with titles that {creator_name} could create:
-- Title 1: [Specific title]
-- Title 2: [Specific title]  
-- Title 3: [Specific title]
-
-HOT TAKE: {creator_name}'s unique, provocative perspective on this {media_type}
-
-DEEP DIVE ANGLES: What aspects {creator_name} could explore (themes, controversies, behind-the-scenes, etc.)
-
-SOCIAL MEDIA STRATEGY: How to leverage this trend across platforms:
-- YouTube video idea
-- YouTube Shorts approach
-- TikTok series concept
-- Instagram Reels idea
-
-TIMING: How urgent is this trend? When should {creator_name} publish content?
-
-CONTENT FORMAT: Best format for {creator_name} (review, reaction, analysis, comparison, etc.)
-
-HASHTAGS: Relevant hashtags for maximum reach
-
-CONTROVERSY/DISCUSSION POINTS: What aspects would generate the most engagement and discussion?"""
-    
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4.1-nano",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800,
-            timeout=30
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"AI Analysis Error: {str(e)}"
-        
-# First, add this function with your other YouTube functions (before the platform section):
-
-def get_relevant_channels_for_creator(creator_name, api_key):
-    """Use AI to find 5 most relevant YouTube channels for a creator"""
-    if not api_key:
-        return None
-    
-    prompt = f"""You are a YouTube content strategist. Find 5 YouTube channels that are most similar to "{creator_name}" in terms of:
-    - Content style and format
-    - Target audience
-    - Topic/niche overlap
-    - Production quality level
-    
-    Focus on channels that would have similar audiences and content approaches.
-    
-    Return ONLY a Python list of 5 channel names like this:
-    ["Channel Name 1", "Channel Name 2", "Channel Name 3", "Channel Name 4", "Channel Name 5"]
-    
-    Make sure channel names are exact and searchable on YouTube. No extra text, just the list."""
-    
-    try:
-        import openai
-        openai.api_key = api_key
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0.3,
-            timeout=30
-        )
-        
-        result = response.choices[0].message.content.strip()
-        
-        # Parse the list from the AI response
-        import ast
-        try:
-            channels = ast.literal_eval(result)
-            if isinstance(channels, list) and len(channels) <= 5:
-                return [channel.strip() for channel in channels if channel.strip()]
-        except:
-            # Fallback parsing if AI doesn't return perfect list format
-            import re
-            channels = re.findall(r'"([^"]*)"', result)
-            return channels[:5] if channels else None
-            
-    except Exception as e:
-        print(f"Error getting relevant channels: {e}")
-        return None
-
-def search_youtube_by_channel(channel_name, api_key=None, max_results=5):
-    """Search YouTube for recent videos from a specific channel"""
-    if not api_key:
-        # Return sample channel results
-        sample_results = [
-            {"title": f"Latest Video from {channel_name}", "views": "156K views", "published": "2 days ago", "description": f"Recent content from {channel_name}...", "video_id": f"sample_{channel_name}_1"},
-            {"title": f"{channel_name}'s Hot Take on Current Events", "views": "89K views", "published": "1 day ago", "description": f"Commentary and analysis from {channel_name}...", "video_id": f"sample_{channel_name}_2"},
-            {"title": f"Breaking: {channel_name} Responds", "views": "234K views", "published": "3 hours ago", "description": f"Response video from {channel_name}...", "video_id": f"sample_{channel_name}_3"},
-        ]
-        return sample_results
-    
-    try:
-        # First, get the channel ID
-        search_url = "https://www.googleapis.com/youtube/v3/search"
-        search_params = {
-            'part': 'snippet',
-            'q': channel_name,
-            'type': 'channel',
-            'maxResults': 1,
-            'key': api_key
-        }
-        
-        search_response = requests.get(search_url, params=search_params, timeout=15)
-        
-        if search_response.status_code == 200:
-            search_data = search_response.json()
-            if search_data.get('items'):
-                channel_id = search_data['items'][0]['id']['channelId']
-                
-                # Now get recent videos from this channel
-                videos_url = "https://www.googleapis.com/youtube/v3/search"
-                videos_params = {
-                    'part': 'snippet',
-                    'channelId': channel_id,
-                    'type': 'video',
-                    'order': 'date',
-                    'maxResults': max_results,
-                    'key': api_key,
-                    'publishedAfter': (datetime.now() - timedelta(days=30)).isoformat() + 'Z'
-                }
-                
-                videos_response = requests.get(videos_url, params=videos_params, timeout=15)
-                
-                if videos_response.status_code == 200:
-                    videos_data = videos_response.json()
-                    channel_videos = []
-                    
-                    for item in videos_data.get('items', []):
-                        snippet = item.get('snippet', {})
-                        video_data = {
-                          'title': snippet.get('title', 'No title'),
-                          'channel': snippet.get('channelTitle', 'Unknown Channel'),
-                          'views': get_video_views(item.get('id', ''), api_key),
-                          'published': format_youtube_date(snippet.get('publishedAt', 'Unknown')),
-                          'video_id': item.get('id', ''),
-                          'description': snippet.get('description', '')[:200] + '...' if snippet.get('description') else '',
-                          'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
-                        }                        
-                        channel_videos.append(video_data)
-                    
-                    return channel_videos
-        
-        # Fallback to sample data if API fails
-        return search_youtube_by_channel(channel_name)
-        
-    except Exception as e:
-        return search_youtube_by_channel(channel_name)  # Return sample data on error
-
-# Now replace your entire YouTube Intelligence platform section with this:
-
-# First, add this function with your other YouTube functions (before the platform section):
-
-def get_video_views(video_id, api_key):
-    """Get view count for a specific video"""
-    if not api_key or not video_id:
-        return "N/A"
-    
-    try:
-        url = "https://www.googleapis.com/youtube/v3/videos"
-        params = {
-            'part': 'statistics',
-            'id': video_id,
-            'key': api_key
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('items'):
-                view_count = data['items'][0].get('statistics', {}).get('viewCount', 'N/A')
-                if view_count != 'N/A':
-                    # Format view count nicely (e.g., 1,234,567 -> 1.2M)
-                    try:
-                        views = int(view_count)
-                        if views >= 1000000:
-                            return f"{views/1000000:.1f}M views"
-                        elif views >= 1000:
-                            return f"{views/1000:.0f}K views"
-                        else:
-                            return f"{views} views"
-                    except:
-                        return f"{view_count} views"
-                return view_count
-        return "N/A"
-    except:
-        return "N/A"
-
-def get_relevant_channels_for_creator(creator_name, api_key):
-    """Search YouTube for recent videos from a specific channel"""
-    if not api_key:
-        # Return sample channel results
-        sample_results = [
-            {"title": f"Latest Video from {channel_name}", "views": "156K views", "published": "2 days ago", "description": f"Recent content from {channel_name}...", "video_id": f"sample_{channel_name}_1"},
-            {"title": f"{channel_name}'s Hot Take on Current Events", "views": "89K views", "published": "1 day ago", "description": f"Commentary and analysis from {channel_name}...", "video_id": f"sample_{channel_name}_2"},
-            {"title": f"Breaking: {channel_name} Responds", "views": "234K views", "published": "3 hours ago", "description": f"Response video from {channel_name}...", "video_id": f"sample_{channel_name}_3"},
-        ]
-        return sample_results
-    
-    try:
-        # First, get the channel ID
-        search_url = "https://www.googleapis.com/youtube/v3/search"
-        search_params = {
-            'part': 'snippet',
-            'q': channel_name,
-            'type': 'channel',
-            'maxResults': 1,
-            'key': api_key
-        }
-        
-        search_response = requests.get(search_url, params=search_params, timeout=15)
-        
-        if search_response.status_code == 200:
-            search_data = search_response.json()
-            if search_data.get('items'):
-                channel_id = search_data['items'][0]['id']['channelId']
-                
-                # Now get recent videos from this channel
-                videos_url = "https://www.googleapis.com/youtube/v3/search"
-                videos_params = {
-                    'part': 'snippet',
-                    'channelId': channel_id,
-                    'type': 'video',
-                    'order': 'date',
-                    'maxResults': max_results,
-                    'key': api_key,
-                    'publishedAfter': (datetime.now() - timedelta(days=30)).isoformat() + 'Z'
-                }
-                
-                videos_response = requests.get(videos_url, params=videos_params, timeout=15)
-                
-                if videos_response.status_code == 200:
-                    videos_data = videos_response.json()
-                    channel_videos = []
-                    
-                    for item in videos_data.get('items', []):
-                        snippet = item.get('snippet', {})
-                        video_data = {
-                          'title': snippet.get('title', 'No title'),
-                          'channel': snippet.get('channelTitle', 'Unknown Channel'),
-                          'views': get_video_views(item.get('id', ''), api_key),
-                          'published': format_youtube_date(snippet.get('publishedAt', 'Unknown')),
-                          'video_id': item.get('id', ''),
-                          'description': snippet.get('description', '')[:200] + '...' if snippet.get('description') else '',
-                          'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
-                        }   
-                        channel_videos.append(video_data)
-                    
-                    return channel_videos
-        
-        # Fallback to sample data if API fails
-        return search_youtube_by_channel(channel_name)
-        
-    except Exception as e:
-        return search_youtube_by_channel(channel_name)  # Return sample data on error
-
-# Now replace your entire YouTube Intelligence platform section with this:
-
-# First, add this function with your other YouTube functions (before the platform section):
-
-def get_video_views(video_id, api_key):
-    """Get view count for a specific video"""
-    if not api_key or not video_id:
-        return "N/A"
-    
-    try:
-        url = "https://www.googleapis.com/youtube/v3/videos"
-        params = {
-            'part': 'statistics',
-            'id': video_id,
-            'key': api_key
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('items'):
-                view_count = data['items'][0].get('statistics', {}).get('viewCount', 'N/A')
-                if view_count != 'N/A':
-                    # Format view count nicely (e.g., 1,234,567 -> 1.2M)
-                    try:
-                        views = int(view_count)
-                        if views >= 1000000:
-                            return f"{views/1000000:.1f}M views"
-                        elif views >= 1000:
-                            return f"{views/1000:.0f}K views"
-                        else:
-                            return f"{views} views"
-                    except:
-                        return f"{view_count} views"
-                return view_count
-        return "N/A"
-    except:
-        return "N/A"
-    """Use AI to find 5 most relevant YouTube channels for a creator"""
-    if not api_key:
-        return None
-    
-    prompt = f"""You are a YouTube content strategist. Find 5 YouTube channels that are most similar to "{creator_name}" in terms of:
-    - Content style and format
-    - Target audience
-    - Topic/niche overlap
-    - Production quality level
-    
-    Focus on channels that would have similar audiences and content approaches.
-    
-    Return ONLY a Python list of 5 channel names like this:
-    ["Channel Name 1", "Channel Name 2", "Channel Name 3", "Channel Name 4", "Channel Name 5"]
-    
-    Make sure channel names are exact and searchable on YouTube. No extra text, just the list."""
-    
-    try:
-        import openai
-        openai.api_key = api_key
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0.3,
-            timeout=30
-        )
-        
-        result = response.choices[0].message.content.strip()
-        
-        # Parse the list from the AI response
-        import ast
-        try:
-            channels = ast.literal_eval(result)
-            if isinstance(channels, list) and len(channels) <= 5:
-                return [channel.strip() for channel in channels if channel.strip()]
-        except:
-            # Fallback parsing if AI doesn't return perfect list format
-            import re
-            channels = re.findall(r'"([^"]*)"', result)
-            return channels[:5] if channels else None
-            
-    except Exception as e:
-        print(f"Error getting relevant channels: {e}")
-        return None
-
-def get_relevant_channels_for_creator(creator_name, api_key):
-    """Search YouTube for recent videos from a specific channel"""
-    if not api_key:
-        # Return sample channel results
-        sample_results = [
-            {"title": f"Latest Video from {channel_name}", "views": "156K views", "published": "2 days ago", "description": f"Recent content from {channel_name}...", "video_id": f"sample_{channel_name}_1"},
-            {"title": f"{channel_name}'s Hot Take on Current Events", "views": "89K views", "published": "1 day ago", "description": f"Commentary and analysis from {channel_name}...", "video_id": f"sample_{channel_name}_2"},
-            {"title": f"Breaking: {channel_name} Responds", "views": "234K views", "published": "3 hours ago", "description": f"Response video from {channel_name}...", "video_id": f"sample_{channel_name}_3"},
-        ]
-        return sample_results
-    
-    try:
-        # First, get the channel ID
-        search_url = "https://www.googleapis.com/youtube/v3/search"
-        search_params = {
-            'part': 'snippet',
-            'q': channel_name,
-            'type': 'channel',
-            'maxResults': 1,
-            'key': api_key
-        }
-        
-        search_response = requests.get(search_url, params=search_params, timeout=15)
-        
-        if search_response.status_code == 200:
-            search_data = search_response.json()
-            if search_data.get('items'):
-                channel_id = search_data['items'][0]['id']['channelId']
-                
-                # Now get recent videos from this channel
-                videos_url = "https://www.googleapis.com/youtube/v3/search"
-                videos_params = {
-                    'part': 'snippet',
-                    'channelId': channel_id,
-                    'type': 'video',
-                    'order': 'date',
-                    'maxResults': max_results,
-                    'key': api_key,
-                    'publishedAfter': (datetime.now() - timedelta(days=30)).isoformat() + 'Z'
-                }
-                
-                videos_response = requests.get(videos_url, params=videos_params, timeout=15)
-                
-                if videos_response.status_code == 200:
-                    videos_data = videos_response.json()
-                    channel_videos = []
-                    
-                    for item in videos_data.get('items', []):
-                        snippet = item.get('snippet', {})
-                        video_data = {
-                            'title': snippet.get('title', 'No title'),
-                            'published': snippet.get('publishedAt', 'Unknown'),
-                            'video_id': item.get('id', {}).get('videoId', ''),
-                            'description': snippet.get('description', '')[:200] + '...' if snippet.get('description') else '',
-                            'channel': snippet.get('channelTitle', channel_name),
-                            'views': 'N/A'  # Would need additional API call to get view count
-                        }
-                        channel_videos.append(video_data)
-                    
-                    return channel_videos
-        
-        # Fallback to sample data if API fails
-        return search_youtube_by_channel(channel_name)
-        
-    except Exception as e:
-        return search_youtube_by_channel(channel_name)  # Return sample data on error
-
 # First, add this function with your other YouTube functions (before the platform section):
 
 def get_video_views(video_id, api_key):
@@ -3535,52 +1980,6 @@ def get_video_views(video_id, api_key):
     except Exception as e:
         print(f"Error fetching views for {video_id}: {e}")
         return "N/A"
-    """Use AI to find 5 most relevant YouTube channels for a creator"""
-    if not api_key:
-        return None
-    
-    prompt = f"""You are a YouTube content strategist. Find 5 YouTube channels that are most similar to "{creator_name}" in terms of:
-    - Content style and format
-    - Target audience
-    - Topic/niche overlap
-    - Production quality level
-    
-    Focus on channels that would have similar audiences and content approaches.
-    
-    Return ONLY a Python list of 5 channel names like this:
-    ["Channel Name 1", "Channel Name 2", "Channel Name 3", "Channel Name 4", "Channel Name 5"]
-    
-    Make sure channel names are exact and searchable on YouTube. No extra text, just the list."""
-    
-    try:
-        import openai
-        openai.api_key = api_key
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0.3,
-            timeout=30
-        )
-        
-        result = response.choices[0].message.content.strip()
-        
-        # Parse the list from the AI response
-        import ast
-        try:
-            channels = ast.literal_eval(result)
-            if isinstance(channels, list) and len(channels) <= 5:
-                return [channel.strip() for channel in channels if channel.strip()]
-        except:
-            # Fallback parsing if AI doesn't return perfect list format
-            import re
-            channels = re.findall(r'"([^"]*)"', result)
-            return channels[:5] if channels else None
-            
-    except Exception as e:
-        print(f"Error getting relevant channels: {e}")
-        return None
 
 def format_youtube_date(date_string):
     """Convert YouTube API date to MM/DD/YY format"""
@@ -4345,40 +2744,43 @@ if st.session_state.current_page == "Case Search":
                     # Get case search term
                     case_search = st.session_state.get('search_query', 'Unknown Case')
                     
-                    prompt = f"""Create a Murder, Mystery & Makeup episode strategy for Bailey Sarian based on this comprehensive research:
-                    
+                    prompt = f"""Create a comprehensive true crime episode strategy for True Crime Obsessed based on this research:
+
                     CASE: {case_search}
-                    
+
                     DATA SUMMARY:
                     - YouTube Videos: {youtube_count} ({"oversaturated" if youtube_count > 200 else "good opportunity" if youtube_count < 50 else "moderate coverage"})
                     - Reddit Discussions: {len(st.session_state.get('reddit_results', []))}
-                    
+
                     {web_search_context}
                     {wiki_article_content}
                     {wiki_context}
                     {reddit_context}
-                    
+
                     Based on ALL this research (especially the web search information), provide:
-                    1. EPISODE TITLE: Catchy MMM-style title that hasn't been overused
-                    2. UNIQUE ANGLE: What fresh perspective can Bailey bring given the existing coverage?
+
+                    1. EPISODE TITLE: Compelling true crime title that stands out from existing coverage
+                    2. UNIQUE ANGLE: What fresh perspective can True Crime Obsessed bring given the existing coverage?
                     3. COLD OPEN: First 30 seconds hook based on the most shocking detail from the sources
-                    4. MAKEUP LOOK: What style pairs with this story
-                    5. STORY STRUCTURE: 
-                        - Opening: Set the scene (use specific details from web search)
-                        - Act 1: Build up (use specific details from all sources)
-                        - Act 2: The crime (incorporate facts from web search and Wikipedia)
-                        - Act 3: Investigation/aftermath
-                        - Conclusion: Bailey's take
-                    6. KEY TALKING POINTS: Based on what Reddit/news are discussing
-                    7. CONTROVERSY/DISCUSSION POINTS: What are people debating about this case?
-                    8. LESSER-KNOWN FACTS: Pull interesting details from the web search that aren't widely covered
-                    9. RESEARCH GAPS: What information is missing that Bailey should research further?
-                    10. VISUAL ELEMENTS: Specific photos and graphics needed
-                    11. ESTIMATED RUNTIME: Episode length
+                    4. STORY STRUCTURE: 
+                    - Opening: Set the scene (use specific details from web search)
+                    - Act 1: Background and buildup (use specific details from all sources)
+                    - Act 2: The crime itself (incorporate facts from web search and Wikipedia)
+                    - Act 3: Investigation and aftermath
+                    - Conclusion: Analysis and takeaways
+                    5. KEY TALKING POINTS: Based on what Reddit/news are discussing
+                    6. CONTROVERSY/DISCUSSION POINTS: What aspects are people most divided on?
+                    7. PSYCHOLOGICAL ANGLE: What makes this case psychologically compelling?
+                    8. LESSER-KNOWN FACTS: Pull interesting details from web search that aren't widely covered
+                    9. RESEARCH GAPS: What information is missing that should be researched further?
+                    10. VISUAL ELEMENTS: Specific photos, documents, and graphics needed
+                    11. ESTIMATED RUNTIME: Episode length recommendation
                     12. COMPETITION ANALYSIS: How to differentiate from the {youtube_count} existing videos
                     13. FACT CHECK LIST: Key facts from web search and Wikipedia to verify
-                    
-                    Make it specific to Bailey's casual, engaging style. Use actual details from ALL sources, especially unique information from the web search."""
+                    14. AUDIENCE ENGAGEMENT: Questions to pose to the audience
+                    15. SERIES POTENTIAL: Could this become a multi-part series?
+
+                    Make it specific to a general true crime format focused on thorough research, compelling storytelling, and audience engagement. Use actual details from ALL sources, especially unique information from the web search."""
                     
                     try:
                         # Use requests instead of OpenAI client
@@ -4419,7 +2821,7 @@ if st.session_state.current_page == "Case Search":
                 st.write(st.session_state.generated_strategy)
                 
                 # Download packet
-                packet = f"""# Murder, Mystery & Makeup Episode Packet
+                packet = f"""# True Crime Obsessed Episode Packet
 
 ## Case: {case_search}
 
@@ -4436,10 +2838,11 @@ if st.session_state.current_page == "Case Search":
 ---
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 """
+
                 st.download_button(
                     "Download Episode Packet",
                     packet,
-                    file_name=f"MMM_{case_search[:30].replace(' ', '_')}_packet.md",
+                    file_name=f"TCO_{case_search[:30].replace(' ', '_')}_packet.md",
                     mime="text/markdown"
                 )
 
@@ -5600,9 +4003,9 @@ elif st.session_state.current_page == "Privacy Policy":
     """)
     
     st.markdown("""
-    ## Bailey's Crime Lab - Privacy Policy
+    ## True Crime Obsessed - Privacy Policy
     
-    This privacy policy explains how Bailey's Crime Lab ("we", "our", "this application") handles information when you use our service.
+    This privacy policy explains how True Crime Obsessed ("we", "our", "this application") handles information when you use our service.
     
     ### YouTube API Services
     This application uses YouTube API Services. By using this application, you agree to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms).
