@@ -50,8 +50,8 @@ st.set_page_config(
 # Enhanced CSS for Shorthand Studios website styling
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-            
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Special+Elite&display=swap');
+                        
 :root {
   --primary-text: #221F1F;
   --accent-red: #DC143C;  /* CHANGED: From #DC143C (light blue) to #DC143C (bold red) */
@@ -90,9 +90,9 @@ body {
 }
 
 .hero-headline {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Special Elite', monospace;
   font-size: 130px;
-  font-weight: 900;
+  font-weight: 400;
   text-transform: uppercase;
   color: var(--primary-text);
   line-height: 0.9;
@@ -445,9 +445,9 @@ if not st.session_state.authenticated:
     }
     
     .bailey-text {
-        font-family: 'Crimson Text', serif;
+        font-family: 'Special Elite', monospace;
         font-size: 60px;
-        font-weight: 700;
+        font-weight: 400;
         color: #000000;
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -456,9 +456,9 @@ if not st.session_state.authenticated:
     }
     
     .crime-lab-text {
-        font-family: 'Crimson Text', serif;
+        font-family: 'Special Elite', monospace;
         font-size: 60px;
-        font-weight: 700;
+        font-weight: 400;
         color: #DC143C;
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -548,7 +548,7 @@ st.sidebar.markdown("---")
 # Simple header for the True Crime Research Hub
 st.markdown("""
 <div style="padding: 2rem 0 1rem 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 2rem;">
-    <h1 style="font-family: 'Crimson Text', serif; font-size: 60px; font-weight: 700; margin: 0; text-transform: none;">
+    <h1 style="font-family: 'Special Elite', monospace; font-size: 60px; font-weight: 400; margin: 0; text-transform: none;">
         TRUE CRIME <span style="color: #DC143C;">OBSESSED</span>
     </h1>
     <p style="font-size: 18px; color: #666; margin-top: 0.5rem;">Research cases, uncover trends, and create killer content</p>
@@ -3989,7 +3989,7 @@ elif st.session_state.current_page == "Court Documents":
 
 elif st.session_state.current_page == "Privacy Policy":
     st.markdown("""
-    <h1 style="font-family: 'Crimson Text', serif; font-size: 48px; font-weight: 700;">Privacy Policy</h1>
+    <h1 style="font-family: 'Special Elite', monospace; font-size: 60px; font-weight: 400; margin: 0; text-transform: none;">
     <p style="font-size: 14px; color: #666;">Last Updated: December 2024</p>
     """, unsafe_allow_html=True)
     
@@ -4109,11 +4109,3 @@ st.markdown("""
   </div>
 </div>
 """, unsafe_allow_html=True)
-
-# Privacy Policy button
-if st.button("Privacy Policy", key="privacy_link"):
-    st.session_state.current_page = "Privacy Policy"
-    st.rerun()
-
-    # Temporary debug info
-st.write(f"Current page: {st.session_state.get('current_page', 'Not set')}")
