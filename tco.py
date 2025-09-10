@@ -2145,12 +2145,8 @@ if st.session_state.current_page == "Case Search":
             status_text = st.empty()
             
             # Search all sources with progress updates
-            status_text.text("Searching Wikipedia...")
-            progress_bar.progress(10)
-            wikidata_results = search_wikidata(case_search, 10)
-            
             status_text.text("Checking YouTube...")
-            progress_bar.progress(25)
+            progress_bar.progress(20)
             youtube_count = count_youtube_videos(case_search, youtube_api_key) if youtube_api_key else 0
             
             # Safety check to ensure youtube_count is always an integer
@@ -2317,9 +2313,6 @@ if st.session_state.current_page == "Case Search":
             # Store all results in session state
             st.session_state.search_performed = True
             st.session_state.search_query = case_search
-            cache_with_expiry('wikidata_results', wikidata_results, hours=24)
-            cache_with_expiry('gdelt_results', [], hours=24)
-            cache_with_expiry('nyt_results', [], hours=24)
             cache_with_expiry('youtube_count', youtube_count, hours=24)
             st.session_state.reddit_results = reddit_results
             st.session_state.web_search_results = web_search_results
@@ -2327,7 +2320,6 @@ if st.session_state.current_page == "Case Search":
     # Display results from session state
     if st.session_state.get('search_performed', False):
         case_search = st.session_state.search_query
-        wikidata_results = get_cached_data('wikidata_results') or []
         gdelt_results = get_cached_data('gdelt_results') or []
         nyt_results = get_cached_data('nyt_results') or []
         youtube_count = get_cached_data('youtube_count') or 0
@@ -2396,7 +2388,7 @@ if st.session_state.current_page == "Case Search":
             
             # Then continue with your existing results display...
         
-        source_tabs = st.tabs(["Overview", "Web Search", "YouTube", "Reddit", "Wikipedia"])
+        source_tabs = st.tabs(["Overview", "Web Search", "YouTube", "Reddit"])
         
         with source_tabs[0]:  # Overview (Perplexity) - previously "Web Search"
             if web_search_results:
@@ -2714,52 +2706,6 @@ if st.session_state.current_page == "Case Search":
                     st.write("---")
             else:
                 st.info("No Reddit discussions found")
-
-        with source_tabs[4]:  # Wikipedia
-            # Try Wikidata first
-            if wikidata_results:
-                st.markdown("#### Wikidata Entries")
-                for item in wikidata_results[:5]:
-                    st.write(f"**{item['label']}**")
-                    st.caption(f"{item['description']}")
-                    st.write(f"[View on Wikidata]({item['url']})")
-                    # Add Wikipedia link
-                    wiki_url = f"https://en.wikipedia.org/wiki/{item['label'].replace(' ', '_')}"
-                    st.write(f"[Search Wikipedia]({wiki_url})")
-                    st.divider()
-            
-            # Always also try Wikipedia's own search API
-            st.markdown("#### Wikipedia Articles")
-            wiki_api_url = "https://en.wikipedia.org/w/api.php"
-            params = {
-                "action": "opensearch",
-                "search": case_search,
-                "limit": 5,
-                "format": "json"
-            }
-            
-            try:
-                response = requests.get(wiki_api_url, params=params, timeout=10)
-                if response.status_code == 200:
-                    data = response.json()
-                    if len(data) > 1 and data[1]:  # data[1] contains titles
-                        for i, title in enumerate(data[1][:5]):
-                            # data[2] has descriptions, data[3] has URLs
-                            description = data[2][i] if len(data) > 2 and i < len(data[2]) else ""
-                            url = data[3][i] if len(data) > 3 and i < len(data[3]) else f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
-                            
-                            st.write(f"**{title}**")
-                            if description:
-                                st.caption(description)
-                            st.write(f"[Read on Wikipedia]({url})")
-                            st.divider()
-                    else:
-                        st.info("No Wikipedia articles found")
-            except Exception as e:
-                st.info("Wikipedia search unavailable")
-                # Provide direct search link
-                wiki_search_url = f"https://en.wikipedia.org/w/index.php?search={case_search.replace(' ', '+')}"
-                st.markdown(f"[Search Wikipedia directly]({wiki_search_url})")
 
         
         # Bailey's Strategy Generator
