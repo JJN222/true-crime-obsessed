@@ -496,7 +496,7 @@ if not st.session_state.authenticated:
         col_a, col_b, col_c = st.columns([1, 1, 1])
         with col_b:
             if st.button("ENTER", type="primary", use_container_width=True):
-                if password == "truecrimeobsessed":  # Replace with your desired password
+                if password == "tco":  # Replace with your desired password
                     st.session_state.authenticated = True
                     st.success("Access granted! Welcome to True Crime Obsessed")
                     st.rerun()
@@ -2760,6 +2760,16 @@ if st.session_state.current_page == "Case Search":
                     # Get YouTube count
                     youtube_count = st.session_state.get('youtube_count', 0)
                     
+                    # Safety check to ensure youtube_count is always an integer
+                    if isinstance(youtube_count, dict):
+                        youtube_count = 0
+                    elif youtube_count is None:
+                        youtube_count = 0
+                    elif not isinstance(youtube_count, (int, float)):
+                        youtube_count = 0
+                    else:
+                        youtube_count = int(youtube_count)
+
                     # Get case search term
                     case_search = st.session_state.get('search_query', 'Unknown Case')
                     
