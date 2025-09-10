@@ -8,6 +8,14 @@ import os
 import feedparser
 import random
 
+def ensure_persistent_auth():
+    """Ensure authentication persists across all page interactions"""
+    # Always check and restore auth from URL if present
+    if not st.session_state.get('authenticated', False):
+        if st.query_params.get('auth') == 'tco_authenticated':
+            st.session_state.authenticated = True
+            st.session_state.auth_timestamp = datetime.now()
+
 # ============ DATA CACHING HELPERS ============
 def cache_with_expiry(key, data, hours=24):
     """Cache data with expiration timestamp"""
@@ -403,6 +411,16 @@ api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, ge
 
 # Hardcode TCO as the creator
 creator_name = "True Crime Obsessed Podcast"
+
+# Add persistent auth check
+def ensure_persistent_auth():
+    """Ensure authentication persists across all page interactions"""
+    if not st.session_state.get('authenticated', False):
+        if st.query_params.get('auth') == 'tco_authenticated':
+            st.session_state.authenticated = True
+            st.session_state.auth_timestamp = datetime.now()
+
+ensure_persistent_auth()
 
 
 # ============ PERSISTENT AUTHENTICATION ============
