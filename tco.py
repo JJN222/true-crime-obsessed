@@ -28,15 +28,6 @@ def get_cached_data(key):
                 del st.session_state[key]
     return None
 
-# Initialize session state only
-if "current_platform" not in st.session_state:
-    st.session_state.current_platform = "Home"
-
-
-# Initialize session state only
-if "current_platform" not in st.session_state:
-    st.session_state.current_platform = "Home"
-
 # Initialize current page for navigation
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "Case Search"
@@ -414,15 +405,44 @@ api_key, youtube_api_key, spotify_client_id, spotify_client_secret, tmdb_key, ge
 creator_name = "True Crime Obsessed Podcast"
 
 
-# ============ ADD LOGIN PAGE HERE ============
+# ============ PERSISTENT AUTHENTICATION ============
 
-# Add this after your API keys initialization
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
+def check_authentication():
+    """Check if user is authenticated with longer session persistence"""
+    
+    # Method 1: Use query parameters to maintain auth state
+    query_params = st.experimental_get_query_params()
+    
+    # Method 2: Enhanced session state with timestamp
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+        st.session_state.auth_timestamp = None
+    
+    # Method 3: Check if auth is recent (within 8 hours)
+    if st.session_state.authenticated and st.session_state.auth_timestamp:
+        time_since_auth = datetime.now() - st.session_state.auth_timestamp
+        if time_since_auth > timedelta(hours=8):
+            st.session_state.authenticated = False
+            st.session_state.auth_timestamp = None
+    
+    # Check URL parameter for auth bypass
+    if query_params.get('auth') == ['tco_authenticated']:
+        st.session_state.authenticated = True
+        st.session_state.auth_timestamp = datetime.now()
+    
+    return st.session_state.authenticated
 
-# Login page
-if not st.session_state.authenticated:
-    # Custom CSS for the login page
+def set_authenticated():
+    """Set authentication with persistence mechanisms"""
+    st.session_state.authenticated = True
+    st.session_state.auth_timestamp = datetime.now()
+    
+    # Set URL parameter to maintain auth on refresh
+    st.experimental_set_query_params(auth='tco_authenticated')
+
+# Replace the existing login section with this:
+if not check_authentication():
+    # Custom CSS for the login page (keep existing CSS)
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
@@ -434,14 +454,6 @@ if not st.session_state.authenticated:
         justify-content: center;
         min-height: 300px;
         text-align: center;
-    }
-    
-    .cursive-text {
-        font-family: 'Dancing Script', cursive;
-        font-size: 32px;
-        font-weight: 700;
-        color: #666666;
-        margin-bottom: 0;
     }
     
     .bailey-text {
@@ -470,6 +482,15 @@ if not st.session_state.authenticated:
         text-align: center;
         font-size: 18px;
     }
+    
+    .session-info {
+        background-color: #f0f0f0;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 20px;
+        font-size: 12px;
+        color: #666;
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -479,7 +500,8 @@ if not st.session_state.authenticated:
     with col2:
         st.markdown("""
         <div class="login-container">
-            <h1 class="bailey-text">TRUE CRIME LAB</h1>
+            <h1 class="bailey-text">TRUE CRIME</h1>
+            <h1 class="crime-lab-text">LAB</h1>
         </div>
         """, unsafe_allow_html=True)
         
@@ -496,17 +518,21 @@ if not st.session_state.authenticated:
         col_a, col_b, col_c = st.columns([1, 1, 1])
         with col_b:
             if st.button("ENTER", type="primary", use_container_width=True):
-                if password == "tco":  # Replace with your desired password
-                    st.session_state.authenticated = True
-                    st.success("Access granted! Welcome to True Crime Obsessed")
+                if password == "tco":
+                    set_authenticated()
+                    st.success("Access granted! Session will persist for 8 hours.")
+                    time.sleep(1)  # Brief pause to show success message
                     st.rerun()
                 else:
                     st.error("Incorrect password. Please try again.")
         
-        # Add a subtle hint or footer
+        # Session persistence info
         st.markdown("""
-        <div style="text-align: center; margin-top: 30px; color: #999;">
-            <small>Authorized personnel only</small>
+        <div class="session-info">
+            <strong>Session Info:</strong><br>
+            • Your login will persist for 8 hours<br>
+            • Bookmark this page to stay logged in<br>
+            • Your session survives page refreshes
         </div>
         """, unsafe_allow_html=True)
     
@@ -525,7 +551,7 @@ TOOLS
 </p>
 """, unsafe_allow_html=True)
 
-research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "YouTube Competitors", "Movies & TV Shows", "Court Documents"]
+research_pages = ["Case Search", "Trending Cases", "True Crime Podcasts", "Movies & TV Shows", "Court Documents"]
 
 # Ensure current_page is valid
 if st.session_state.current_page not in research_pages and st.session_state.current_page != "Privacy Policy":
@@ -3249,445 +3275,6 @@ elif st.session_state.current_page == "True Crime Podcasts":
         else:
             st.info("Configure Spotify API to search episodes by topic")
             st.markdown("This feature requires Spotify API credentials")
-
-elif st.session_state.current_page == "YouTube Competitors":    
-    st.markdown("### YouTube Competitor Monitoring")
-    st.markdown("Data provided by YouTube API Services")
-    st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-    
-    # Add rate limit status indicator
-    if st.session_state.get('youtube_rate_limited', False):
-        st.error("""
-        🚫 **YouTube API Rate Limited**
-        
-        You've reached the YouTube API quota limit. The quota resets daily at midnight Pacific Time.
-        Some features may not work until the quota resets.
-        """)
-        # Reset the flag after showing
-        if st.button("Clear this message"):
-            st.session_state.youtube_rate_limited = False
-            st.rerun()
-
-    # Define competitors with their channel IDs
-    COMPETITORS = {
-        "Danielle Kirsty": "UC7QBeubzVIOqFjUjd_gNEBQ",
-        "Kendall Rae": "UCKBaL17hXLGJvi2KZKpja5w",
-        "Rotten Mango": "UC0JJtK3m8pwy6rVgnBz47Rw",
-        "Eleanor Neale": "UCFMbX7frWZfuWdjAML0babA",
-        "Hailey Elizabeth": "UCdeGMtF2xelP7Od2ofdP0qg",
-        "Stephanie Soo": "UCo9ZZ04kIhN_8xGxvnjaduQ",
-        "Bella Fiori": "UCaezsZGhwWgB4ZRmHNCfIyw",
-        "Annie Elise": "UCOK0fZAUx82plnLhTKZW6qg",
-        "Mile Higher": "UCiaxrqSxVoGxGKg7Ayd4Q9A",
-        "Charlotte Dobre": "UCwc_RHwAPPaEh-jtwClpVrg"
-    }
-    
-    # Search or Browse mode
-    mode = st.radio(
-        "Mode",
-        ["Browse Recent", "Search Topics"],
-        horizontal=True,
-        key="competitor_mode"
-    )
-    
-    if mode == "Browse Recent":
-        # Options for browsing
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            selected_competitors = st.multiselect(
-                "Select Competitors",
-                options=list(COMPETITORS.keys()),
-                default=list(COMPETITORS.keys())[:5],
-                key="competitor_select"
-            )
-        
-        with col2:
-            time_period = st.selectbox(
-                "Time Period",
-                ["Last 24 Hours", "Last Week", "Last Month", "Last 3 Months", "Last 6 Months", "Last Year"],
-                index=1,  # Default to Last Week
-                key="competitor_time_period"
-            )
-        
-        with col3:
-            videos_per_channel = st.number_input(
-                "Videos per channel",
-                min_value=3,
-                max_value=20,
-                value=5,
-                key="videos_per_competitor"
-            )
-        
-        if st.button("Get Competitor Videos", type="primary", use_container_width=True, key="get_competitor_videos"):
-            if not youtube_api_key:
-                st.error("YouTube API key not configured")
-            elif not selected_competitors:
-                st.warning("Please select at least one competitor")
-            else:
-                with st.spinner(f"Fetching videos from {len(selected_competitors)} channels..."):
-                    # Calculate date filter
-                    from datetime import datetime, timedelta
-                    
-                    if time_period == "Last 24 Hours":
-                        published_after = (datetime.now() - timedelta(days=1)).isoformat() + 'Z'
-                    elif time_period == "Last Week":
-                        published_after = (datetime.now() - timedelta(days=7)).isoformat() + 'Z'
-                    elif time_period == "Last Month":
-                        published_after = (datetime.now() - timedelta(days=30)).isoformat() + 'Z'
-                    elif time_period == "Last 3 Months":
-                        published_after = (datetime.now() - timedelta(days=90)).isoformat() + 'Z'
-                    elif time_period == "Last 6 Months":
-                        published_after = (datetime.now() - timedelta(days=180)).isoformat() + 'Z'
-                    elif time_period == "Last Year":
-                        published_after = (datetime.now() - timedelta(days=365)).isoformat() + 'Z'
-                    
-                    all_videos = []
-                    progress_bar = st.progress(0)
-                    
-                    for idx, channel_name in enumerate(selected_competitors):
-                        progress_bar.progress((idx + 1) / len(selected_competitors))
-                        channel_id = COMPETITORS[channel_name]
-                        
-                        try:
-                            # Search for videos from this channel
-                            search_url = "https://www.googleapis.com/youtube/v3/search"
-                            params = {
-                                "key": youtube_api_key,
-                                "channelId": channel_id,
-                                "part": "snippet",
-                                "order": "viewCount",  # Order by views from the start
-                                "type": "video",
-                                "maxResults": videos_per_channel,
-                                "publishedAfter": published_after
-                            }
-                            
-                            response = requests.get(search_url, params=params, timeout=10)
-                            
-                            if response.status_code == 200:
-                                data = response.json()
-                                
-                                # Get video IDs for detailed stats
-                                video_ids = [item['id']['videoId'] for item in data.get('items', [])]
-                                
-                                if video_ids:
-                                    # Get detailed video information
-                                    details_url = "https://www.googleapis.com/youtube/v3/videos"
-                                    details_params = {
-                                        "key": youtube_api_key,
-                                        "id": ",".join(video_ids),
-                                        "part": "snippet,statistics,contentDetails"
-                                    }
-                                    
-                                    details_response = requests.get(details_url, params=details_params, timeout=10)
-                                    
-                                    if details_response.status_code == 200:
-                                        details_data = details_response.json()
-                                        
-                                        for video in details_data.get('items', []):
-                                            # Parse duration
-                                            duration_str = video['contentDetails']['duration']
-                                            import re
-                                            match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
-                                            if match:
-                                                hours = int(match.group(1) or 0)
-                                                minutes = int(match.group(2) or 0)
-                                                seconds = int(match.group(3) or 0)
-                                                total_seconds = hours * 3600 + minutes * 60 + seconds
-                                            else:
-                                                total_seconds = 0
-                                            
-                                            video_info = {
-                                                'channel_name': channel_name,
-                                                'title': video['snippet']['title'],
-                                                'video_id': video['id'],
-                                                'published': video['snippet']['publishedAt'],
-                                                'views': int(video['statistics'].get('viewCount', 0)),
-                                                'likes': int(video['statistics'].get('likeCount', 0)),
-                                                'comments': int(video['statistics'].get('commentCount', 0)),
-                                                'duration_seconds': total_seconds,
-                                                'thumbnail': video['snippet']['thumbnails']['medium']['url'],
-                                                'description': video['snippet'].get('description', '')
-                                            }
-                                            
-                                            all_videos.append(video_info)
-                            
-                            time.sleep(0.2)  # Rate limiting
-                            
-                        except Exception as e:
-                            st.warning(f"Error fetching {channel_name}: {str(e)}")
-                            continue
-                    
-                    progress_bar.empty()
-                    
-                    if all_videos:
-                        # Always sort by views (already ordered by API, but sort combined results)
-                        all_videos.sort(key=lambda x: x['views'], reverse=True)
-                        
-                        st.success(f"Found {len(all_videos)} videos from {len(selected_competitors)} channels (sorted by views)")
-                        st.markdown("Data provided by YouTube API Services")  # ADD HERE
-                        st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-
-                        
-                        # Display results
-                        for i, video in enumerate(all_videos, 1):
-                            # Determine if it's a short
-                            is_short = video['duration_seconds'] <= 180
-                            video_type = "SHORT" if is_short else "VIDEO"
-                            
-                            # Format views for display
-                            if video['views'] >= 1000000:
-                                views_display = f"{video['views']/1000000:.1f}M views"
-                            elif video['views'] >= 1000:
-                                views_display = f"{video['views']/1000:.0f}K views"
-                            else:
-                                views_display = f"{video['views']} views"
-                            
-                            with st.expander(f"{i:02d} | {views_display} - {video['title'][:50]}... ({video['channel_name']}) [{video_type}]", expanded=(i <= 3)):
-                                col1, col2 = st.columns([1, 2])
-                                
-                                with col1:
-                                    st.image(video['thumbnail'], use_column_width=True)
-                                    
-                                    # Format publish date
-                                    try:
-                                        from datetime import datetime
-                                        pub_date = datetime.strptime(video['published'][:10], '%Y-%m-%d')
-                                        formatted_date = pub_date.strftime('%m/%d/%y')
-                                    except:
-                                        formatted_date = video['published'][:10]
-                                    
-                                    st.caption(f"Published: {formatted_date}")
-                                
-                                with col2:
-                                    st.markdown(f"**Channel:** {video['channel_name']}")
-                                    st.markdown(f"**Title:** {video['title']}")
-                                    
-                                    # Metrics
-                                    col_a, col_b, col_c = st.columns(3)
-                                    with col_a:
-                                        st.metric("Views", views_display)
-                                    
-                                    with col_b:
-                                        if video['likes'] >= 1000:
-                                            likes_str = f"{video['likes']/1000:.0f}K"
-                                        else:
-                                            likes_str = str(video['likes'])
-                                        st.metric("Likes", likes_str)
-
-                                    with col_c:
-                                        st.metric("Comments", video['comments'])
-
-                                    # Duration
-                                    if is_short:
-                                        st.caption(f"Duration: {video['duration_seconds']} seconds (Short)")
-                                    else:
-                                        minutes = video['duration_seconds'] // 60
-                                        seconds = video['duration_seconds'] % 60
-                                        st.caption(f"Duration: {minutes}:{seconds:02d}")
-                                    
-                                    # Description preview
-                                    if video['description']:
-                                        st.markdown("**Description:**")
-                                        st.text(video['description'][:500] + "..." if len(video['description']) > 500 else video['description'])
-
-                                    # Link to video
-                                    st.markdown(f"[Watch on YouTube](https://youtube.com/watch?v={video['video_id']})")
-                                
-                                st.divider()
-                    else:
-                        st.warning("No videos found from selected competitors in this time period")
-    
-    else:  # Search Topics mode
-        st.markdown("#### Search Competitor Videos by Topic")
-        
-        # Search interface
-        col1, col2 = st.columns([3, 1])
-        
-        with col1:
-            search_query = st.text_input(
-                "Search for a case, topic, or keyword",
-                placeholder="e.g., 'JonBenet Ramsey', 'Idaho murders', 'cold case'",
-                key="competitor_search_query"
-            )
-        
-        with col2:
-            search_channels = st.multiselect(
-                "Search in channels",
-                options=list(COMPETITORS.keys()),
-                default=list(COMPETITORS.keys()),
-                key="search_channels"
-            )
-        
-        if st.button("Search Competitor Content", type="primary", use_container_width=True, key="search_competitor_content") and search_query:
-            if not youtube_api_key:
-                st.error("YouTube API key not configured")
-            elif not search_channels:
-                st.warning("Please select at least one channel to search")
-            else:
-                with st.spinner(f"Searching for '{search_query}' across {len(search_channels)} channels..."):
-                    search_results = []
-                    progress_bar = st.progress(0)
-                    
-                    for idx, channel_name in enumerate(search_channels):
-                        progress_bar.progress((idx + 1) / len(search_channels))
-                        channel_id = COMPETITORS[channel_name]
-                        
-                        try:
-                            # Search within specific channel
-                            search_url = "https://www.googleapis.com/youtube/v3/search"
-                            params = {
-                                "key": youtube_api_key,
-                                "channelId": channel_id,
-                                "q": search_query,
-                                "part": "snippet",
-                                "type": "video",
-                                "maxResults": 10,
-                                "order": "viewCount"  # Order by views
-                            }
-                            
-                            response = requests.get(search_url, params=params, timeout=10)
-                            
-                            if response.status_code == 200:
-                                data = response.json()
-                                
-                                # Get video IDs for detailed stats
-                                video_ids = [item['id']['videoId'] for item in data.get('items', [])]
-                                
-                                if video_ids:
-                                    # Get detailed video information
-                                    details_url = "https://www.googleapis.com/youtube/v3/videos"
-                                    details_params = {
-                                        "key": youtube_api_key,
-                                        "id": ",".join(video_ids),
-                                        "part": "snippet,statistics,contentDetails"
-                                    }
-                                    
-                                    details_response = requests.get(details_url, params=details_params, timeout=10)
-                                    
-                                    if details_response.status_code == 200:
-                                        details_data = details_response.json()
-                                        
-                                        for video in details_data.get('items', []):
-                                            # Check if search term is in title or description
-                                            title = video['snippet']['title'].lower()
-                                            description = video['snippet'].get('description', '').lower()
-                                            search_lower = search_query.lower()
-                                            
-                                            if search_lower in title or search_lower in description:
-                                                # Parse duration
-                                                duration_str = video['contentDetails']['duration']
-                                                import re
-                                                match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
-                                                if match:
-                                                    hours = int(match.group(1) or 0)
-                                                    minutes = int(match.group(2) or 0)
-                                                    seconds = int(match.group(3) or 0)
-                                                    total_seconds = hours * 3600 + minutes * 60 + seconds
-                                                else:
-                                                    total_seconds = 0
-                                                
-                                                video_info = {
-                                                    'channel_name': channel_name,
-                                                    'title': video['snippet']['title'],
-                                                    'video_id': video['id'],
-                                                    'published': video['snippet']['publishedAt'],
-                                                    'views': int(video['statistics'].get('viewCount', 0)),
-                                                    'likes': int(video['statistics'].get('likeCount', 0)),
-                                                    'comments': int(video['statistics'].get('commentCount', 0)),
-                                                    'duration_seconds': total_seconds,
-                                                    'thumbnail': video['snippet']['thumbnails']['medium']['url'],
-                                                    'description': video['snippet'].get('description', ''),
-                                                    'relevance': 'title' if search_lower in title else 'description'
-                                                }
-                                                
-                                                search_results.append(video_info)
-                            
-                            time.sleep(0.2)  # Rate limiting
-                            
-                        except Exception as e:
-                            continue
-                    
-                    progress_bar.empty()
-                    
-                    if search_results:
-                        # Sort by views
-                        search_results.sort(key=lambda x: x['views'], reverse=True)
-                        
-                        st.success(f"Found {len(search_results)} videos about '{search_query}'")
-                        st.markdown("Data provided by YouTube API Services")  # ADD HERE
-                        st.caption("YouTube data is fetched live and not stored. Data freshness depends on YouTube API.")
-
-                        
-                        # Display search results
-                        for i, video in enumerate(search_results, 1):
-                            # Format views for display
-                            if video['views'] >= 1000000:
-                                views_display = f"{video['views']/1000000:.1f}M views"
-                            elif video['views'] >= 1000:
-                                views_display = f"{video['views']/1000:.0f}K views"
-                            else:
-                                views_display = f"{video['views']} views"
-                            
-                            # Indicate where match was found
-                            match_indicator = "TITLE MATCH" if video['relevance'] == 'title' else "DESCRIPTION MATCH"
-                            
-                            with st.expander(f"{i:02d} | {views_display} - {video['title'][:50]}... ({video['channel_name']}) [{match_indicator}]", expanded=(i <= 3)):
-                                col1, col2 = st.columns([1, 2])
-                                
-                                with col1:
-                                    st.image(video['thumbnail'], use_column_width=True)
-                                    
-                                    # Format publish date
-                                    try:
-                                        from datetime import datetime
-                                        pub_date = datetime.strptime(video['published'][:10], '%Y-%m-%d')
-                                        formatted_date = pub_date.strftime('%m/%d/%y')
-                                    except:
-                                        formatted_date = video['published'][:10]
-                                    
-                                    st.caption(f"Published: {formatted_date}")
-                                
-                                with col2:
-                                    st.markdown(f"**Channel:** {video['channel_name']}")
-                                    st.markdown(f"**Title:** {video['title']}")
-                                    
-                                    # Highlight where search term was found
-                                    if video['relevance'] == 'title':
-                                        st.success(f"Search term found in TITLE")
-                                    else:
-                                        st.info(f"Search term found in DESCRIPTION")
-                                    
-                                    # Metrics
-                                    col_a, col_b, col_c = st.columns(3)
-                                    with col_a:
-                                        st.metric("Views", views_display)
-                                    with col_b:
-                                        st.metric("Likes", likes_str)
-                                    with col_c:
-                                        st.metric("Comments", str(video['comments']))
-                                    
-                                    # Show relevant part of description
-                                    if video['description']:
-                                        st.markdown("**Description:**")
-                                        # Highlight search term in description
-                                        desc_lower = video['description'].lower()
-                                        search_lower = search_query.lower()
-                                        if search_lower in desc_lower:
-                                            # Find position of search term
-                                            pos = desc_lower.find(search_lower)
-                                            start = max(0, pos - 100)
-                                            end = min(len(video['description']), pos + 200)
-                                            excerpt = video['description'][start:end]
-                                            st.text(f"...{excerpt}...")
-                                        else:
-                                            st.text(video['description'][:500] + "..." if len(video['description']) > 500 else video['description'])
-                                    
-                                    st.markdown(f"[Watch on YouTube](https://youtube.com/watch?v={video['video_id']})")
-                                
-                                st.divider()
-                    else:
-                        st.warning(f"No videos found about '{search_query}' from selected competitors")
                         
 elif st.session_state.current_page == "Movies & TV Shows":    
     # st.markdown("### Movies & TV Shows")
