@@ -411,7 +411,7 @@ def check_authentication():
     """Check if user is authenticated with longer session persistence"""
     
     # Method 1: Use query parameters to maintain auth state
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params
     
     # Method 2: Enhanced session state with timestamp
     if 'authenticated' not in st.session_state:
@@ -438,7 +438,7 @@ def set_authenticated():
     st.session_state.auth_timestamp = datetime.now()
     
     # Set URL parameter to maintain auth on refresh
-    st.experimental_set_query_params(auth='tco_authenticated')
+    st.query_params['auth'] = 'tco_authenticated'
 
 # Replace the existing login section with this:
 if not check_authentication():
