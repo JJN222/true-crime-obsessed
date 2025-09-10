@@ -818,8 +818,10 @@ def search_with_perplexity(query, api_key, search_type="comprehensive"):
         st.error(f"Perplexity API Error: {str(e)}")
         return None
 
+# Enhanced Case Overview with consistent template for creators
+
 def get_perplexity_case_analysis(case_name, perplexity_api_key):
-    """Get comprehensive case analysis using Perplexity's online model"""
+    """Get comprehensive case analysis using Perplexity's online model with creator-focused template"""
     if not perplexity_api_key:
         return None
     
@@ -835,47 +837,49 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
             "Content-Type": "application/json"
         }
         
+        # Enhanced prompt with structured template for creators
         data = {
             "model": "sonar",
             "messages": [{
                 "role": "user",
-                "content": f"""Search for information about "{case_name}" ONLY in the context of:
-                - Murder cases
-                - Homicides
-                - Serial killers
-                - Missing persons (presumed dead)
-                - Unsolved mysteries involving death
-                - True crime cases
-                
-                DO NOT include:
-                - Political cases
-                - Civil lawsuits
-                - Corporate fraud
-                - Non-violent crimes
-                - Living people (unless they are perpetrators/suspects in murder cases)
-                
-                IMPORTANT CITATION RULES:
-                - DO NOT use numbered citations like [1][2][3] in your response
-                - Instead, use inline source attribution like "according to FBI records" or "as reported by CNN"
-                - At the very end, add a "Sources:" section listing the sources you referenced
-                
-                If "{case_name}" is NOT associated with any murder/death/true crime case, respond with:
-                "No true crime case found for this name. This may be a political figure, civil case, or living person not associated with murder cases."
-                
-                If you find a TRUE CRIME case, include:
-                1. What happened (the murder/crime)
-                2. When and where it occurred
-                3. Victim(s) - full names and ages if available
-                4. Suspect(s)/Perpetrator(s)
-                5. Current status (solved/unsolved/convicted)
-                6. Key evidence or mysteries
-                7. Recent updates
-                
-                End with:
-                Sources:
-                - List your sources here
-                
-                Remember: This is for a true crime podcast. ONLY return information about murders, deaths, or violent crimes."""
+                "content": f"""Research "{case_name}" and provide information in this EXACT format for true crime content creators:
+
+## CASE OVERVIEW
+**What Happened:** [2-3 sentence summary of the crime]
+**When:** [Date/timeframe] 
+**Where:** [Location with specifics]
+**Status:** [Solved/Unsolved/Ongoing]
+
+## KEY PEOPLE
+**Victim(s):** [Name, age, brief background]
+**Perpetrator(s):** [Name, status - convicted/suspect/unknown]
+**Key Investigators:** [Lead detective/agency if notable]
+
+## CONTENT CREATOR ANGLES
+**Why It's Compelling:** [What makes this case interesting for audiences]
+**Unique Elements:** [Unusual aspects, mysteries, or twists]
+**Visual Elements:** [Photos, evidence, locations available]
+**Audience Appeal:** [Why viewers would be drawn to this story]
+
+## RESEARCH STARTING POINTS
+**Primary Sources:** [Court documents, police reports, official records]
+**Media Coverage:** [Major news outlets that covered it]
+**Books/Documentaries:** [Existing long-form content]
+**Gaps to Explore:** [Under-covered aspects or new angles]
+
+## CONTENT WARNINGS
+**Sensitive Elements:** [Violence level, victim details to handle carefully]
+**Family Considerations:** [Are families still affected/seeking privacy?]
+
+## RECENT DEVELOPMENTS
+**Latest Updates:** [Any new information, appeals, or developments]
+**Ongoing Interest:** [Current public/media attention level]
+
+IMPORTANT RULES:
+- If this is NOT a true crime case (murder, disappearance, violent crime), respond with: "Not a true crime case - this appears to be [what it actually is]"
+- Focus on factual, verified information only
+- Include content creator perspective throughout
+- Mention if case involves minors or requires special sensitivity"""
             }],
             "temperature": 0.2,
             "max_tokens": 2000
@@ -887,13 +891,13 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
             result = response.json()
             content = result['choices'][0]['message']['content']
             
-            # Remove any remaining numbered citations like [1][2][3]
+            # Clean up any numbered citations
             content = re.sub(r'\[\d+\](\[\d+\])*', '', content)
             
             # Check if no crime case was found
-            if "no true crime case found" in content.lower():
+            if "not a true crime case" in content.lower():
                 return {
-                    'overview': f"❌ **No True Crime Case Found**\n\n{content}\n\nTry searching for:\n- A different spelling\n- Adding context (e.g., 'victim' or 'murder')\n- Including location or year"
+                    'overview': f"⚠️ **Not a True Crime Case**\n\n{content}\n\n**Suggestions:**\n- Try a different spelling\n- Add context (e.g., 'murder victim' or 'disappeared')\n- Include location or timeframe\n- Search for the actual crime rather than related people"
                 }
             
             return {
@@ -901,13 +905,33 @@ def get_perplexity_case_analysis(case_name, perplexity_api_key):
             }
         else:
             print(f"Perplexity API error: {response.status_code} - {response.text}")
-            st.error(f"Perplexity API error: {response.status_code}")
             return None
             
     except Exception as e:
         print(f"Perplexity API error: {str(e)}")
-        st.error(f"Perplexity API error: {str(e)}")
         return None
+
+# Optional: Add a post-processing function to ensure consistency
+def format_case_overview(raw_overview):
+    """Ensure case overview follows the template structure"""
+    if not raw_overview:
+        return raw_overview
+    
+    # Check if the overview follows the expected format
+    required_sections = [
+        "## CASE OVERVIEW",
+        "## KEY PEOPLE", 
+        "## CONTENT CREATOR ANGLES",
+        "## RESEARCH STARTING POINTS"
+    ]
+    
+    # If missing key sections, add a note about incomplete information
+    missing_sections = [section for section in required_sections if section not in raw_overview]
+    
+    if missing_sections:
+        raw_overview += f"\n\n**Note:** Some information may be limited. Missing sections: {', '.join(missing_sections)}\n\nTry searching with more specific terms or check if this is actually a true crime case."
+    
+    return raw_overview
             
 def search_reddit_by_keywords(query, subreddits, limit=5):
   """Search Reddit for posts containing specific keywords"""
