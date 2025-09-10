@@ -49,11 +49,12 @@ st.set_page_config(
 # Enhanced CSS for Shorthand Studios website styling
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Special+Elite&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@600&display=swap');
+
                         
 :root {
   --primary-text: #221F1F;
-  --accent-red: #DC143C;  /* CHANGED: From #DC143C (light blue) to #DC143C (bold red) */
+  --accent-red: #d201a3;  /* CHANGED: From #d201a3 (light blue) to #d201a3 (bold red) */
   --secondary-red: #ff9797;
   --background: #FFFFFF;
   --footer-grey: #666666;
@@ -89,7 +90,8 @@ body {
 }
 
 .hero-headline {
-  font-family: 'Special Elite', monospace;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
   font-size: 130px;
   font-weight: 400;
   text-transform: uppercase;
@@ -154,8 +156,8 @@ body {
             
 /* Section headings */
 h1, h2, h3 {
-  font-family: 'Special Elite', monospace;
-  font-weight: 400;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
   text-transform: uppercase;
   color: var(--primary-text);
   letter-spacing: -1px;
@@ -300,13 +302,13 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] > div {
 
 /* Selected radio button - RED */
 section[data-testid="stSidebar"] [aria-checked="true"] > div:first-child > div {
-    background-color: #DC143C !important;
-    border-color: #DC143C !important;
+    background-color: #d201a3 !important;
+    border-color: #d201a3 !important;
 }
 
 /* Selected radio button inner circle - RED */
 section[data-testid="stSidebar"] [aria-checked="true"] > div:first-child > div > div {
-    background-color: #DC143C !important;
+    background-color: #d201a3 !important;
 }
 
 /* Unselected radio buttons */
@@ -475,9 +477,9 @@ if not check_authentication():
     }
     
     .bailey-text {
-        font-family: 'Special Elite', monospace;
+        font-family: 'Oswald', sans-serif;
+        font-weight: 600;
         font-size: 60px;
-        font-weight: 400;
         color: #000000;
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -486,10 +488,10 @@ if not check_authentication():
     }
     
     .crime-lab-text {
-        font-family: 'Special Elite', monospace;
+        font-family: 'Oswald', sans-serif;
+        font-weight: 600;
         font-size: 60px;
-        font-weight: 400;
-        color: #DC143C;
+        color: #d201a3;
         text-transform: uppercase;
         letter-spacing: 2px;
         margin-top: -20px;
@@ -564,7 +566,7 @@ if 'current_page' not in st.session_state:
 
 # Direct navigation to tools
 st.sidebar.markdown("""
-<p style="font-family: 'Special Elite', monospace; font-size: 30px; font-weight: 600; color: #FFFFFF; margin-bottom: 0.5rem;">
+<p style="font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 30px; color: #FFFFFF; margin-bottom: 0.5rem;">
 TOOLS
 </p>
 """, unsafe_allow_html=True)
@@ -591,8 +593,8 @@ st.sidebar.markdown("---")
 # Simple header for the True Crime Research Hub
 st.markdown("""
 <div style="padding: 2rem 0 1rem 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 2rem;">
-    <h1 style="font-family: 'Special Elite', monospace; font-size: 60px; font-weight: 400; margin: 0; text-transform: none;">
-        TRUE CRIME <span style="color: #DC143C;">OBSESSED</span>
+    <h1 style="font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 60px; margin: 0; text-transform: none;">
+        TRUE CRIME <span style="color: #d201a3;">OBSESSED</span>
     </h1>
     <p style="font-size: 18px; color: #666; margin-top: 0.5rem;">Research cases, uncover trends, and create killer content</p>
 </div>
@@ -3352,15 +3354,15 @@ elif st.session_state.current_page == "Movies & TV Shows":
                         st.markdown(f"""
                         <div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
                             <div>
-                                <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_average', 0):.1f}</p>
+                                <p style="font-size: 24px; font-weight: 800; color: #d201a3; margin: 0;">{item.get('vote_average', 0):.1f}</p>
                                 <p style="font-size: 12px; text-transform: uppercase; color: #666;">Rating</p>
                             </div>
                             <div>
-                                <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_count', 0):,}</p>
+                                <p style="font-size: 24px; font-weight: 800; color: #d201a3; margin: 0;">{item.get('vote_count', 0):,}</p>
                                 <p style="font-size: 12px; text-transform: uppercase; color: #666;">Votes</p>
                             </div>
                             <div>
-                                <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('popularity', 0):.0f}</p>
+                                <p style="font-size: 24px; font-weight: 800; color: #d201a3; margin: 0;">{item.get('popularity', 0):.0f}</p>
                                 <p style="font-size: 12px; text-transform: uppercase; color: #666;">Popularity</p>
                             </div>
                         </div>
@@ -3472,15 +3474,15 @@ elif st.session_state.current_page == "Movies & TV Shows":
                     st.markdown(f"""
                     <div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
                         <div>
-                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_average', 0):.1f}</p>
+                            <p style="font-size: 24px; font-weight: 800; color: #d201a3; margin: 0;">{item.get('vote_average', 0):.1f}</p>
                             <p style="font-size: 12px; text-transform: uppercase; color: #666;">Rating</p>
                         </div>
                         <div>
-                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('vote_count', 0):,}</p>
+                            <p style="font-size: 24px; font-weight: 800; color: #d201a3; margin: 0;">{item.get('vote_count', 0):,}</p>
                             <p style="font-size: 12px; text-transform: uppercase; color: #666;">Votes</p>
                         </div>
                         <div>
-                            <p style="font-size: 24px; font-weight: 800; color: #DC143C; margin: 0;">{item.get('popularity', 0):.0f}</p>
+                            <p style="font-size: 24px; font-weight: 800; color: #d201a3; margin: 0;">{item.get('popularity', 0):.0f}</p>
                             <p style="font-size: 12px; text-transform: uppercase; color: #666;">Popularity</p>
                         </div>
                     </div>
@@ -3521,7 +3523,7 @@ elif st.session_state.current_page == "Court Documents":
             # Button that opens the URL in a new tab
             st.markdown(f'''
             <a href="{search_url}" target="_blank">
-                <button style="width: 100%; padding: 0.5rem; background-color: #DC143C; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <button style="width: 100%; padding: 0.5rem; background-color: #d201a3; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     Search on CourtListener
                 </button>
             </a>
